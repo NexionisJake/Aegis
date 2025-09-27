@@ -1,0 +1,241 @@
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-header {
+  background: #1a1a1a;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.view-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.view-controls button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #646cff;
+  background: transparent;
+  color: #646cff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-controls button:hover:not(:disabled) {
+  background: #646cff;
+  color: white;
+}
+
+.view-controls button.active {
+  background: #646cff;
+  color: white;
+}
+
+.view-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.view-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #333;
+  border-top: 4px solid #646cff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 600px;
+  width: 90%;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid #ff6b6b;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(255, 107, 107, 0.2);
+}
+
+.error-content {
+  padding: 2rem;
+  text-align: center;
+  color: #ff6b6b;
+}
+
+.error-content h3 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.error-content p {
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.error-suggestions {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+}
+
+.error-suggestions h4 {
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.error-suggestions ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #ccc;
+}
+
+.error-suggestions li {
+  margin: 0.3rem 0;
+  line-height: 1.4;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.retry-button, .reload-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.retry-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.retry-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.retry-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reload-button {
+  background: #ff6b6b;
+  color: white;
+}
+
+.reload-button:hover {
+  background: #ff5252;
+  transform: translateY(-2px);
+}
+
+.error-help {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  font-style: italic;
+  color: #ccc;
+}
+
+.component-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 2rem;
+  text-align: center;
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 8px;
+  margin: 1rem;
+}
+
+.component-error h3 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+}
+
+.component-error p {
+  margin: 0 0 1.5rem 0;
+  opacity: 0.9;
+}
+
+.component-error .error-actions {
+  margin-top: 0;
+}
+
+.component-error button {
+  padding: 0.5rem 1rem;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0 0.5rem;
+}
+
+.component-error button:hover {
+  background: #ff5252;
+}
