@@ -1,0 +1,35 @@
+/* Styles for SolarSystem 3D view component */
+
+.solar-system-container {
+  width: 100vw;
+  height: 100vh;
+  background: #0a0a1a;
+  overflow: hidden;
+  position: relative;
+}
+
+.solar-system-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.solar-system-controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 2rem;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.solar-system-label {
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin: 0.2rem 0;
+}
