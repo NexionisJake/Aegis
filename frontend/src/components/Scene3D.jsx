@@ -80,22 +80,31 @@ const Scene3D = React.memo(({ trajectory, onSimulateImpact, onImpactSelect }) =>
     <div className="scene3d-container">
       <Canvas
         camera={cameraConfig}
-        style={{ background: '#000011' }}
+        style={{ 
+          background: 'linear-gradient(135deg, #050B1A, #001024)',
+          backgroundAttachment: 'fixed'
+        }}
         dpr={qualitySettings.pixelRatio}
-        antialias={qualitySettings.antialias}
+        antialias={!!qualitySettings.antialias}
         shadows={qualitySettings.shadowsEnabled}
         performance={{ min: 0.5 }}
         frameloop="demand" // Only render when needed
       >
-        {/* Optimized lighting setup */}
-        <ambientLight intensity={0.3} />
+        {/* Enhanced cosmic lighting setup */}
+        <ambientLight intensity={0.2} color="#0E1D3A" />
         <pointLight 
           position={[0, 0, 0]} 
-          intensity={2} 
-          color="#FDB813" 
+          intensity={3} 
+          color="#FFCC33" 
           castShadow={qualitySettings.shadowsEnabled}
-          shadow-mapSize-width={qualitySettings.shadowsEnabled ? 1024 : 256}
-          shadow-mapSize-height={qualitySettings.shadowsEnabled ? 1024 : 256}
+          shadow-mapSize-width={qualitySettings.shadowsEnabled ? 2048 : 512}
+          shadow-mapSize-height={qualitySettings.shadowsEnabled ? 2048 : 512}
+        />
+        <directionalLight
+          position={[10, 10, 5]}
+          intensity={0.5}
+          color="#00E5FF"
+          castShadow={qualitySettings.shadowsEnabled}
         />
         
         {/* Adaptive background stars */}

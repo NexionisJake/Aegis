@@ -1,0 +1,49 @@
+
+/* 🌟 Cosmic Effects */
+.cosmic-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.orbital-trail {
+  stroke: var(--color-aegis-cyan);
+  stroke-width: 2;
+  fill: none;
+  filter: drop-shadow(0 0 3px var(--color-aegis-cyan));
+  animation: trailGlow 2s ease-in-out infinite;
+}
+
+.asteroid-trail {
+  stroke: var(--color-ember-orange);
+  stroke-width: 2;
+  fill: none;
+  filter: drop-shadow(0 0 3px var(--color-ember-orange));
+  animation: trailGlow 2s ease-in-out infinite;
+}
+
+.impact-zone {
+  fill: var(--color-warning-red);
+  filter: drop-shadow(0 0 5px var(--color-warning-red));
+  animation: impactPulse 1s ease-in-out infinite;
+}
+
+@keyframes trailGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes impactPulse {
+  0%, 100% { 
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}

@@ -12,25 +12,7 @@ const ImpactMap = ({ impactData, impactCoordinates, onBackTo3D }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* Back to 3D button */}
-      <button 
-        onClick={onBackTo3D}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          zIndex: 1000,
-          padding: '0.5rem 1rem',
-          background: '#646cff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-      >
-        ← Back to 3D View
-      </button>
+
 
       {/* Impact information panel */}
       {impactData && (

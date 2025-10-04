@@ -1,59 +1,102 @@
 .performance-monitor {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 12px;
+  top: 15px;
+  right: 15px;
+  background: var(--color-panel-dark);
+  color: var(--color-cloud-white);
+  padding: 0.75rem;
   border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  min-width: 200px;
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 10px;
+  min-width: 180px;
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--color-panel-border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   z-index: 1000;
+  opacity: 0.9;
+  overflow: hidden;
+}
+
+.performance-monitor::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-aegis-cyan), var(--color-solar-gold));
+  animation: monitorGlow 3s ease-in-out infinite;
+}
+
+@keyframes monitorGlow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 .performance-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-dusk-gray);
 }
 
 .performance-header h4 {
   margin: 0;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-aegis-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.performance-header h4::before {
+  content: '⚡';
+  font-size: 12px;
+  filter: drop-shadow(0 0 5px var(--color-aegis-cyan));
 }
 
 .performance-status {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+  backdrop-filter: blur(10px);
 }
 
 .performance-status.excellent {
-  background: #4CAF50;
-  color: white;
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4CAF50;
+  color: #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
 }
 
 .performance-status.good {
-  background: #8BC34A;
-  color: white;
+  background: rgba(139, 195, 74, 0.2);
+  border-color: #8BC34A;
+  color: #8BC34A;
+  box-shadow: 0 0 10px rgba(139, 195, 74, 0.3);
 }
 
 .performance-status.fair {
-  background: #FF9800;
-  color: white;
+  background: rgba(255, 152, 0, 0.2);
+  border-color: #FF9800;
+  color: #FF9800;
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
 }
 
 .performance-status.poor {
-  background: #F44336;
-  color: white;
+  background: rgba(244, 67, 54, 0.2);
+  border-color: #F44336;
+  color: #F44336;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
 }
 
 .performance-metrics {
@@ -75,29 +118,36 @@
 }
 
 .metric-label {
-  color: #ccc;
-  font-size: 11px;
+  color: var(--color-orbit-gray);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .metric-value {
-  font-weight: bold;
-  color: white;
+  font-weight: 700;
+  color: var(--color-cloud-white);
+  text-shadow: 0 0 5px rgba(245, 247, 250, 0.3);
 }
 
 .metric-value.fps-excellent {
   color: #4CAF50;
+  text-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
 }
 
 .metric-value.fps-good {
   color: #8BC34A;
+  text-shadow: 0 0 8px rgba(139, 195, 74, 0.4);
 }
 
 .metric-value.fps-fair {
   color: #FF9800;
+  text-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
 }
 
 .metric-value.fps-poor {
   color: #F44336;
+  text-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
 }
 
 .metric-value.memory-excellent {

@@ -2,10 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import Scene3D from './components/Scene3D'
 import ImpactMap from './components/ImpactMap'
 import ErrorBoundary, { ThreeDErrorBoundary } from './components/ErrorBoundary'
+import ThemeToggle from './components/ThemeToggle'
+import { useTheme } from './contexts/ThemeContext'
 import { enhancedApi, APIError, NetworkError, TimeoutError } from './utils/apiClient'
 import './App.css'
 
 function App() {
+  // Theme context
+  const { currentTheme, switchTheme, currentThemeData } = useTheme()
+  
   // State management for trajectory data and view modes
   const [view, setView] = useState('3D')
   const [trajectory, setTrajectory] = useState(null)
@@ -219,6 +224,11 @@ function App() {
     setError(null)
     setAsteroidDataError(null)
 
+    // Switch to Impact (Crisis) mode when simulating impact
+    if (currentTheme !== 'impact') {
+      switchTheme('impact')
+    }
+
     try {
       // Check if asteroid data is available
       if (!asteroidData) {
@@ -344,21 +354,24 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Project Aegis - Asteroid Impact Simulator</h1>
-        <div className="view-controls">
-          <button 
-            className={view === '3D' ? 'active' : ''}
-            onClick={() => handleViewChange('3D')}
-            disabled={loading}
-          >
-            3D Orbital View
-          </button>
-          <button 
-            className={view === '2D' ? 'active' : ''}
-            onClick={() => handleViewChange('2D')}
-            disabled={loading || !impactData}
-          >
-            Impact Map
-          </button>
+        <div className="header-controls">
+          <ThemeToggle className="theme-control" />
+          <div className="view-controls">
+            <button 
+              className={view === '3D' ? 'active' : ''}
+              onClick={() => handleViewChange('3D')}
+              disabled={loading}
+            >
+              3D Orbital View
+            </button>
+            <button 
+              className={view === '2D' ? 'active' : ''}
+              onClick={() => handleViewChange('2D')}
+              disabled={loading || !impactData}
+            >
+              Impact Map
+            </button>
+          </div>
         </div>
       </header>
 
