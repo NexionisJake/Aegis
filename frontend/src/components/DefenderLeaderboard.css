@@ -1,0 +1,47 @@
+/* Styles for DefenderLeaderboard component */
+
+.defender-leaderboard {
+  background: var(--hud-bg, #101c2a);
+  color: var(--primary-color, #00e6ff);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin: 1.5rem auto;
+  max-width: 400px;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.defender-leaderboard h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--primary-color, #00e6ff);
+}
+
+.defender-leaderboard table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+}
+
+.defender-leaderboard th,
+.defender-leaderboard td {
+  padding: 0.4rem 0.3rem;
+  text-align: left;
+}
+
+.defender-leaderboard th {
+  color: #b3e6ff;
+  font-weight: 600;
+  border-bottom: 1px solid #1e2a38;
+}
+
+.defender-leaderboard tr:nth-child(even) {
+  background: rgba(0,230,255,0.04);
+}
+
+.defender-leaderboard tr.you {
+  background: rgba(0,230,255,0.13);
+  font-weight: bold;
+}

@@ -1,0 +1,19 @@
+/* Narration bar glassmorphism style */
+.narration-bar {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 320px;
+  max-width: 600px;
+  padding: 1.1rem 2.2rem;
+  font-size: 1.13rem;
+  color: #fff;
+  text-align: center;
+  z-index: 100;
+  font-family: 'Inter', 'Roboto', Arial, sans-serif;
+}
+.narration-text {
+  color: #b3e6ff;
+  letter-spacing: 0.01em;
+}

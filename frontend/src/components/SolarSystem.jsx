@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Sphere, Line, Ring, useTexture } from '@react-three/drei'
+import { Sphere, Line, Ring, useTexture, Html } from '@react-three/drei'
 // import { EffectComposer, Bloom, SSAO } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -37,7 +37,89 @@ const CoordinateProcessor = {
   }
 }
 
-const SolarSystem = React.memo(({ trajectory, onImpactSelect }) => {
+const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPerformanceChange }) => {
+  // Interactive orbit state
+  const [hoveredOrbit, setHoveredOrbit] = useState(null)
+  const [infoBox, setInfoBox] = useState(null)
+  const [deflectionPreview, setDeflectionPreview] = useState(false)
+  const [timelineDate, setTimelineDate] = useState('2029-04-13')
+  const { camera } = useThree()
+  const idleTimer = useRef(null)
+  const [autoOrbit, setAutoOrbit] = useState(false)
+  // Camera auto-orbit when idle
+  useEffect(() => {
+    const resetIdle = () => {
+      setAutoOrbit(false)
+      clearTimeout(idleTimer.current)
+      idleTimer.current = setTimeout(() => setAutoOrbit(true), 6000)
+    }
+    window.addEventListener('mousemove', resetIdle)
+    window.addEventListener('mousedown', resetIdle)
+    resetIdle()
+    return () => {
+      window.removeEventListener('mousemove', resetIdle)
+      window.removeEventListener('mousedown', resetIdle)
+      clearTimeout(idleTimer.current)
+    }
+  }, [])
+  // Animate camera auto-orbit
+  useFrame((state) => {
+    if (autoOrbit) {
+      const t = state.clock.getElapsedTime() * 0.1
+      const r = 10
+      camera.position.x = Math.cos(t) * r
+      camera.position.z = Math.sin(t) * r
+      camera.lookAt(0, 0, 0)
+    }
+  })
+  // Orbit hover/click handlers
+  const handleOrbitPointerOver = (type, event) => {
+    setHoveredOrbit(type)
+    setInfoBox({
+      x: event.clientX,
+      y: event.clientY,
+      params: type === 'earth' ? {
+        name: 'Earth',
+        inclination: '0°',
+        eccentricity: '0.0167',
+        semiMajorAxis: '1 AU'
+      } : {
+        name: 'Asteroid',
+        inclination: '3.3°',
+        eccentricity: '0.191',
+        semiMajorAxis: '0.922 AU'
+      }
+    })
+  }
+  const handleOrbitPointerOut = () => {
+    setHoveredOrbit(null)
+    setInfoBox(null)
+  }
+  const handleOrbitClick = (type) => {
+    // Smooth camera focus on orbit
+    if (type === 'earth') {
+      camera.position.set(2, 1, 2)
+      camera.lookAt(0, 0, 0)
+    } else {
+      camera.position.set(0.5, 0.2, 0.5)
+      camera.lookAt(earthRef.current?.position || { x: 0, y: 0, z: 0 })
+    }
+    setAutoOrbit(false)
+  }
+  // Timeline bar update (placeholder logic)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimelineDate((prev) => {
+        // Simple fake date increment
+        const d = new Date(prev)
+        d.setDate(d.getDate() + 1)
+        return d.toISOString().slice(0, 10)
+      })
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
+  // Deflection preview toggle handler
+  const handleDeflectionToggle = () => setDeflectionPreview((v) => !v)
   const earthRef = useRef()
   const asteroidRef = useRef()
   const earthLineRef = useRef()
@@ -55,7 +137,7 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect }) => {
   const earthRotationSpeed = 0.01 // Earth's rotation speed
 
   // Three.js context for raycasting
-  const { camera, gl } = useThree()
+  const { gl } = useThree()
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const mouse = useMemo(() => new THREE.Vector2(), [])
 
@@ -324,29 +406,96 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect }) => {
 
 
 
-      {/* Earth orbital path - optimized line rendering */}
+      {/* Earth orbital path - interactive */}
       {geometryData.earthPathGeometry && (
-        <line ref={earthLineRef} geometry={geometryData.earthPathGeometry}>
+        <line
+          ref={earthLineRef}
+          geometry={geometryData.earthPathGeometry}
+          onPointerOver={(e) => handleOrbitPointerOver('earth', e)}
+          onPointerOut={handleOrbitPointerOut}
+          onClick={() => handleOrbitClick('earth')}
+        >
           <lineBasicMaterial 
-            color="#4A90E2" 
-            opacity={0.7} 
-            transparent 
-            linewidth={2}
+            color={hoveredOrbit === 'earth' ? '#FFD700' : '#4A90E2'}
+            opacity={0.9}
+            transparent
+            linewidth={hoveredOrbit === 'earth' ? 4 : 2}
           />
         </line>
       )}
 
-      {/* Asteroid orbital path - optimized line rendering */}
+      {/* Asteroid orbital path - interactive, with deflection preview */}
       {geometryData.asteroidPathGeometry && (
-        <line ref={asteroidLineRef} geometry={geometryData.asteroidPathGeometry}>
+        <line
+          ref={asteroidLineRef}
+          geometry={geometryData.asteroidPathGeometry}
+          onPointerOver={(e) => handleOrbitPointerOver('asteroid', e)}
+          onPointerOut={handleOrbitPointerOut}
+          onClick={() => handleOrbitClick('asteroid')}
+        >
           <lineBasicMaterial 
-            color="#FF6B6B" 
-            opacity={0.9} 
-            transparent 
-            linewidth={3}
+            color={deflectionPreview ? '#00FFFF' : (hoveredOrbit === 'asteroid' ? '#FFD700' : '#FF6B6B')}
+            opacity={0.95}
+            transparent
+            linewidth={hoveredOrbit === 'asteroid' ? 4 : 3}
           />
         </line>
       )}
+      {/* Floating info box for orbital parameters */}
+      {infoBox && (
+        <Html position={[0, 1.5, 0]} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            position: 'fixed',
+            left: infoBox.x + 12,
+            top: infoBox.y - 24,
+            background: 'rgba(20,30,40,0.95)',
+            color: '#fff',
+            borderRadius: 8,
+            padding: '10px 18px',
+            fontSize: 14,
+            boxShadow: '0 2px 12px #000a',
+            zIndex: 10000
+          }}>
+            <b>{infoBox.params.name} Orbit</b><br/>
+            Inclination: {infoBox.params.inclination}<br/>
+            Eccentricity: {infoBox.params.eccentricity}<br/>
+            Semi-Major Axis: {infoBox.params.semiMajorAxis}
+          </div>
+        </Html>
+      )}
+      {/* Timeline bar and deflection toggle overlay */}
+      <Html position={[0, 2.5, 0]} style={{ pointerEvents: 'auto' }}>
+        <div style={{
+          position: 'fixed',
+          left: 40,
+          bottom: 40,
+          background: 'rgba(10,20,40,0.95)',
+          color: '#fff',
+          borderRadius: 12,
+          padding: '12px 28px',
+          fontSize: 16,
+          boxShadow: '0 2px 12px #000a',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 24,
+          pointerEvents: 'auto'
+        }}>
+          <span>🕒 {timelineDate}</span>
+          <button style={{
+            background: deflectionPreview ? '#00FFFF' : '#FF6B6B',
+            color: '#222',
+            border: 'none',
+            borderRadius: 6,
+            padding: '6px 16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 15
+          }} onClick={handleDeflectionToggle}>
+            {deflectionPreview ? 'Hide Deflection Preview' : 'Show Deflection Preview'}
+          </button>
+        </div>
+      </Html>
 
       {/* Earth - cinematic material with fallback */}
       <Sphere 

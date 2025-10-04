@@ -6,6 +6,10 @@ import ThemeToggle from './components/ThemeToggle'
 import { useTheme } from './contexts/ThemeContext'
 import { enhancedApi, APIError, NetworkError, TimeoutError } from './utils/apiClient'
 import './App.css'
+import DefenderHUD from './components/DefenderHUD'
+import DefenderTechCards from './components/DefenderTechCards'
+import DefenderSuccessMeter from './components/DefenderSuccessMeter'
+import DefenderLeaderboard from './components/DefenderLeaderboard'
 
 function App() {
   // Theme context
@@ -27,53 +31,40 @@ function App() {
   // Impact location state management with default India coordinates
   const [impactCoords, setImpactCoords] = useState([20.5937, 78.9629])
 
+  // Defender Mode state
+  const [defenderMode, setDefenderMode] = useState(false)
+  const [fuel, setFuel] = useState(100)
+  const [timeToImpact, setTimeToImpact] = useState('2d 4h')
+  const [successProb, setSuccessProb] = useState(70)
+  const [selectedTech, setSelectedTech] = useState('Kinetic Impactor')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [missionScore, setMissionScore] = useState(0)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+
+  // Defender Mode theme switch
+  useEffect(() => {
+    if (defenderMode) {
+      document.body.style.setProperty('--primary-color', '#00e6ff')
+      document.body.style.setProperty('--secondary-color', '#e6e6e6')
+      document.body.style.setProperty('--hud-bg', '#0a1a22')
+    } else {
+      document.body.style.removeProperty('--primary-color')
+      document.body.style.removeProperty('--secondary-color')
+      document.body.style.removeProperty('--hud-bg')
+    }
+  }, [defenderMode])
+
+  // Simulate mission result
+
   // Enhanced error handling with user-friendly messages
   const getErrorMessage = useCallback((error) => {
     if (error instanceof NetworkError) {
       return {
-        title: 'Connection Problem',
-        message: 'Unable to connect to the server. Please check your internet connection and try again.',
-        type: 'network'
+        title: 'API Error',
+        message: error.message || 'An error occurred while communicating with the server.',
+        type: 'api_error'
       }
     }
-    
-    if (error instanceof TimeoutError) {
-      return {
-        title: 'Request Timeout',
-        message: 'The request is taking longer than expected. Please try again.',
-        type: 'timeout'
-      }
-    }
-    
-    if (error instanceof APIError) {
-      switch (error.status) {
-        case 404:
-          return {
-            title: 'Asteroid Not Found',
-            message: 'The requested asteroid could not be found in the NASA database.',
-            type: 'not_found'
-          }
-        case 429:
-          return {
-            title: 'Too Many Requests',
-            message: 'The NASA API is currently rate-limited. Please wait a moment and try again.',
-            type: 'rate_limit'
-          }
-        case 503:
-          return {
-            title: 'Service Unavailable',
-            message: 'The NASA API is temporarily unavailable. Please try again later.',
-            type: 'service_unavailable'
-          }
-        default:
-          return {
-            title: 'API Error',
-            message: error.message || 'An error occurred while communicating with the server.',
-            type: 'api_error'
-          }
-      }
-    }
-    
     // Handle asteroid data extraction errors with user-friendly messages
     if (error.message && error.message.includes('parameters not available')) {
       return {
@@ -237,7 +228,6 @@ function App() {
 
       // Extract real parameters from asteroid data with validation and fallback handling
       let diameter, velocity
-      
       try {
         diameter = extractDiameter(asteroidData)
       } catch (diameterError) {
@@ -246,7 +236,6 @@ function App() {
         diameter = 0.34
         console.log('Using fallback diameter for Apophis: 0.34 km')
       }
-      
       try {
         velocity = extractVelocity(asteroidData)
       } catch (velocityError) {
@@ -260,7 +249,6 @@ function App() {
       if (!diameter || diameter <= 0) {
         throw new Error('Invalid diameter parameter extracted from asteroid data')
       }
-      
       if (!velocity || velocity <= 0) {
         throw new Error('Invalid velocity parameter extracted from asteroid data')
       }
@@ -278,7 +266,6 @@ function App() {
     } catch (err) {
       console.error('Error calculating impact:', err)
       const errorInfo = getErrorMessage(err)
-      
       // Set asteroid-specific error if it's related to asteroid data
       if (err.message && (err.message.includes('parameters') || err.message.includes('data'))) {
         setAsteroidDataError(errorInfo)
@@ -289,55 +276,6 @@ function App() {
       setLoading(false)
     }
   }
-
-  // Enhanced retry functionality with improved data fetching workflow
-  const handleRetry = useCallback(async () => {
-    if (retryCount >= 3) {
-      return // Max retries reached
-    }
-
-    setRetryCount(prev => prev + 1)
-    setIsRetrying(true)
-    setError(null)
-    setAsteroidDataError(null)
-    setLoading(true)
-
-    try {
-      // Step 1: Retry fetching complete asteroid data first
-      console.log(`Retry attempt ${retryCount + 1}: Fetching asteroid data...`)
-      const asteroidDataResponse = await enhancedApi.getAsteroid('Apophis')
-      
-      // Validate asteroid data before storing
-      if (!asteroidDataResponse) {
-        throw new Error('Invalid asteroid data received during retry')
-      }
-      
-      setAsteroidData(asteroidDataResponse)
-      console.log('Asteroid data retry successful')
-      
-      // Step 2: Then retry trajectory data
-      console.log('Retrying trajectory data fetch...')
-      const trajectoryData = await enhancedApi.getTrajectory('Apophis')
-      setTrajectory(trajectoryData)
-      
-      setRetryCount(0) // Reset on success
-      console.log('Retry completed successfully')
-      
-    } catch (err) {
-      console.error(`Retry attempt ${retryCount + 1} failed:`, err)
-      const errorInfo = getErrorMessage(err)
-      
-      // Determine if this is an asteroid data specific error
-      if (err.message && err.message.includes('asteroid data')) {
-        setAsteroidDataError(errorInfo)
-      } else {
-        setError(errorInfo)
-      }
-    } finally {
-      setLoading(false)
-      setIsRetrying(false)
-    }
-  }, [retryCount, getErrorMessage])
 
   // Handle impact location selection callback
   const handleImpactSelect = useCallback((coordinates) => {
@@ -350,13 +288,36 @@ function App() {
     setView(newView)
   }
 
+  // Simulate mission result
+  const handleDefenderSimulate = () => {
+    setShowSuccess(true)
+    setMissionScore(successProb)
+    setTimeout(() => setShowLeaderboard(true), 2000)
+  }
+
+  // Defender Mode theme switch
+  useEffect(() => {
+    if (defenderMode) {
+      document.body.style.setProperty('--primary-color', '#00e6ff')
+      document.body.style.setProperty('--secondary-color', '#e6e6e6')
+      document.body.style.setProperty('--hud-bg', '#0a1a22')
+    } else {
+      document.body.style.removeProperty('--primary-color')
+      document.body.style.removeProperty('--secondary-color')
+      document.body.style.removeProperty('--hud-bg')
+    }
+  }, [defenderMode])
+
   return (
-    <div className="app">
+    <div className={`app${defenderMode ? ' defender-mode' : ''}`}> 
       <header className="app-header">
         <h1>Project Aegis - Asteroid Impact Simulator</h1>
         <div className="header-controls">
           <ThemeToggle className="theme-control" />
           <div className="view-controls">
+            <button onClick={() => setDefenderMode((v) => !v)} style={{marginRight:8}}>
+              {defenderMode ? 'Exit Defender Mode' : 'Earth Defender Mode'}
+            </button>
             <button 
               className={view === '3D' ? 'active' : ''}
               onClick={() => handleViewChange('3D')}
@@ -376,6 +337,16 @@ function App() {
       </header>
 
       <main className="app-main">
+        {defenderMode && (
+          <>
+            <DefenderHUD fuel={fuel} time={timeToImpact} probability={successProb} />
+            <DefenderTechCards onSelect={setSelectedTech} selected={selectedTech} />
+            <button className="defender-sim-btn" onClick={handleDefenderSimulate} style={{margin:'18px 0'}}>Simulate Mission</button>
+            {showSuccess && <DefenderSuccessMeter score={missionScore} />}
+            {showLeaderboard && <DefenderLeaderboard />}
+          </>
+        )}
+
         {loading && (
           <div className="loading-indicator">
             <div className="spinner"></div>

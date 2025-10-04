@@ -1,3 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Exo+2:wght@700&family=Inter:wght@400;600&family=Roboto:wght@400;500&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --heading-font: 'Orbitron', 'Exo 2', Arial, sans-serif;
+  --body-font: 'Inter', 'Roboto', Arial, sans-serif;
+  --numeric-font: 'Space Mono', monospace;
+}
+
+body {
+  font-family: var(--body-font);
+  background: #0a1a22;
+  color: #e6e6e6;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--heading-font);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.numeric, .data-value, .crater-size, .energy-value {
+  font-family: var(--numeric-font);
+  letter-spacing: 0.01em;
+}
+
 .app {
   width: 100vw;
   height: 100vh;
@@ -375,4 +400,12 @@
 
 .component-error button:hover {
   background: #ff5252;
+}
+
+.glass-panel {
+  background: rgba(10, 20, 35, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.13);
 }

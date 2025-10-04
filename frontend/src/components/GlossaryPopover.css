@@ -1,0 +1,53 @@
+/* Glassmorphism panel and glossary popover styles */
+.glass-panel {
+  background: rgba(10, 20, 35, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.13);
+}
+
+.glossary-popover-wrapper {
+  display: inline-block;
+  position: relative;
+}
+.glossary-icon {
+  display: inline-block;
+  background: #00e6ff;
+  color: #101c2a;
+  border-radius: 50%;
+  width: 1.1em;
+  height: 1.1em;
+  font-size: 0.95em;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.1em;
+  margin-left: 0.25em;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.10);
+}
+.glossary-popover {
+  position: absolute;
+  left: 120%;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 180px;
+  max-width: 260px;
+  z-index: 100;
+  padding: 1rem 1.2rem;
+  font-size: 0.98em;
+  color: #fff;
+}
+.glossary-popover strong {
+  color: #00e6ff;
+  font-size: 1.05em;
+}
+.glossary-def {
+  margin: 0.4em 0 0.3em 0;
+}
+.glossary-img {
+  width: 60px;
+  height: auto;
+  margin-top: 0.3em;
+  display: block;
+}
