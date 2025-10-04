@@ -16,9 +16,13 @@ from orbital_calculator import (
     calculate_trajectory,
     get_earth_trajectory,
     calculate_both_trajectories,
+    create_time_range,
     OrbitalElements,
     OrbitalCalculationError
 )
+from impact_calculator import ImpactCalculationError
+from astropy.time import Time
+from astropy import units as u
 
 
 class TestOrbitalElementsExtraction:
@@ -572,6 +576,85 @@ class TestTrajectoryCalculation:
         
         trajectory = calculate_trajectory(elements, num_points=100)
         assert len(trajectory) == 100
+    
+    def test_calculate_trajectory_with_times_parameter(self):
+        """Test trajectory calculation with provided times parameter."""
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        # Create custom time array
+        epoch_time = Time(elements.epoch, format='jd')
+        end_time = epoch_time + 1 * u.year
+        custom_times = create_time_range(epoch_time, end_time, 20)
+        
+        # Test with provided times parameter
+        trajectory_with_times = calculate_trajectory(elements, times=custom_times)
+        
+        # Verify trajectory uses provided times (should have 20 points)
+        assert len(trajectory_with_times) == 20
+        
+        # Test backward compatibility - without times parameter
+        trajectory_without_times = calculate_trajectory(elements, num_points=20)
+        
+        # Should also have 20 points but calculated differently
+        assert len(trajectory_without_times) == 20
+        
+        # Verify both are valid trajectories
+        for coord in trajectory_with_times:
+            assert isinstance(coord, list)
+            assert len(coord) == 3
+            assert all(isinstance(x, float) for x in coord)
+        
+        for coord in trajectory_without_times:
+            assert isinstance(coord, list)
+            assert len(coord) == 3
+            assert all(isinstance(x, float) for x in coord)
+    
+    def test_calculate_trajectory_times_parameter_overrides_num_points(self):
+        """Test that times parameter overrides num_points when both are provided."""
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        # Create custom time array with 15 points
+        epoch_time = Time(elements.epoch, format='jd')
+        end_time = epoch_time + 180 * u.day  # Approximately 6 months
+        custom_times = create_time_range(epoch_time, end_time, 15)
+        
+        # Call with both times and num_points - times should take precedence
+        trajectory = calculate_trajectory(elements, num_points=100, times=custom_times)
+        
+        # Should have 15 points (from times array), not 100 (from num_points)
+        assert len(trajectory) == 15
+    
+    def test_calculate_trajectory_empty_times_parameter(self):
+        """Test trajectory calculation with empty times parameter raises error."""
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        # Test with empty times array
+        with pytest.raises(OrbitalCalculationError, match="Provided times array is empty"):
+            calculate_trajectory(elements, times=[])
 
 
 class TestEarthTrajectoryCalculation:
@@ -579,7 +662,12 @@ class TestEarthTrajectoryCalculation:
     
     def test_get_earth_trajectory_success(self):
         """Test successful Earth trajectory calculation."""
-        trajectory = get_earth_trajectory(num_points=12)
+        # Create a time array for testing
+        epoch_time = Time.now()
+        end_time = epoch_time + 2 * u.year
+        times = create_time_range(epoch_time, end_time, 12)
+        
+        trajectory = get_earth_trajectory(times)
         
         # Verify basic properties
         assert isinstance(trajectory, list)
@@ -598,7 +686,12 @@ class TestEarthTrajectoryCalculation:
     
     def test_get_earth_trajectory_circular_properties(self):
         """Test that Earth's trajectory has approximately circular properties."""
-        trajectory = get_earth_trajectory(num_points=8)
+        # Create a time array for testing
+        epoch_time = Time.now()
+        end_time = epoch_time + 2 * u.year
+        times = create_time_range(epoch_time, end_time, 8)
+        
+        trajectory = get_earth_trajectory(times)
         
         # Calculate distances from origin
         distances = []
@@ -613,11 +706,22 @@ class TestEarthTrajectoryCalculation:
     
     def test_get_earth_trajectory_custom_num_points(self):
         """Test Earth trajectory calculation with custom number of points."""
-        trajectory = get_earth_trajectory(num_points=24)
+        # Create time arrays for testing
+        epoch_time = Time.now()
+        end_time = epoch_time + 2 * u.year
+        
+        times_24 = create_time_range(epoch_time, end_time, 24)
+        trajectory = get_earth_trajectory(times_24)
         assert len(trajectory) == 24
         
-        trajectory = get_earth_trajectory(num_points=100)
+        times_100 = create_time_range(epoch_time, end_time, 100)
+        trajectory = get_earth_trajectory(times_100)
         assert len(trajectory) == 100
+    
+    def test_get_earth_trajectory_empty_times(self):
+        """Test Earth trajectory calculation with empty times array."""
+        with pytest.raises(ImpactCalculationError, match="Empty times array provided"):
+            get_earth_trajectory([])
 
 
 class TestCombinedTrajectoryCalculation:
@@ -667,7 +771,7 @@ class TestCombinedTrajectoryCalculation:
             epoch=2461000.5
         )
         
-        with pytest.raises(OrbitalCalculationError):
+        with pytest.raises(ImpactCalculationError):
             calculate_both_trajectories(elements)
 
 
@@ -729,3 +833,472 @@ class TestTrajectoryAccuracy:
             
             # Distance should be reasonable for orbital motion
             assert distance < 0.5  # Less than 0.5 AU between consecutive points
+
+
+class TestSynchronizedOrbitalCalculations:
+    """Test suite for synchronized orbital calculations."""
+    
+    def test_identical_time_intervals_asteroid_earth(self):
+        """Test that Earth and asteroid trajectories use identical time intervals."""
+        elements = OrbitalElements(
+            semi_major_axis=0.9224065263,
+            eccentricity=0.1914276290,
+            inclination=3.3314075515,
+            longitude_ascending_node=204.4460935,
+            argument_periapsis=126.3927123,
+            mean_anomaly=268.7143123,
+            epoch=2461000.5
+        )
+        
+        # Calculate both trajectories
+        result = calculate_both_trajectories(elements, num_points=20)
+        
+        # Verify both trajectories have identical number of points
+        assert len(result["asteroid_path"]) == len(result["earth_path"])
+        assert len(result["asteroid_path"]) == 20
+        assert len(result["earth_path"]) == 20
+        
+        # Verify trajectories are not empty
+        assert result["asteroid_path"]
+        assert result["earth_path"]
+        
+        # Verify each coordinate is a valid 3D point
+        for coord in result["asteroid_path"]:
+            assert isinstance(coord, list)
+            assert len(coord) == 3
+            assert all(isinstance(x, float) for x in coord)
+            assert all(math.isfinite(x) for x in coord)
+        
+        for coord in result["earth_path"]:
+            assert isinstance(coord, list)
+            assert len(coord) == 3
+            assert all(isinstance(x, float) for x in coord)
+            assert all(math.isfinite(x) for x in coord)
+    
+    def test_epoch_synchronization_various_asteroids(self):
+        """Test epoch synchronization with various asteroid orbital elements."""
+        # Test with different asteroid configurations
+        test_asteroids = [
+            # Apophis-like asteroid
+            OrbitalElements(
+                semi_major_axis=0.9224065263,
+                eccentricity=0.1914276290,
+                inclination=3.3314075515,
+                longitude_ascending_node=204.4460935,
+                argument_periapsis=126.3927123,
+                mean_anomaly=268.7143123,
+                epoch=2461000.5
+            ),
+            # Circular orbit asteroid
+            OrbitalElements(
+                semi_major_axis=1.2,
+                eccentricity=0.05,
+                inclination=5.0,
+                longitude_ascending_node=100.0,
+                argument_periapsis=200.0,
+                mean_anomaly=45.0,
+                epoch=2460000.0
+            ),
+            # Highly elliptical asteroid
+            OrbitalElements(
+                semi_major_axis=2.5,
+                eccentricity=0.8,
+                inclination=25.0,
+                longitude_ascending_node=300.0,
+                argument_periapsis=150.0,
+                mean_anomaly=180.0,
+                epoch=2462000.0
+            ),
+            # High inclination asteroid
+            OrbitalElements(
+                semi_major_axis=1.5,
+                eccentricity=0.3,
+                inclination=45.0,
+                longitude_ascending_node=45.0,
+                argument_periapsis=90.0,
+                mean_anomaly=270.0,
+                epoch=2459000.0
+            )
+        ]
+        
+        for i, elements in enumerate(test_asteroids):
+            # Each asteroid should successfully calculate synchronized trajectories
+            result = calculate_both_trajectories(elements, num_points=12)
+            
+            # Verify synchronization
+            assert len(result["asteroid_path"]) == len(result["earth_path"])
+            assert len(result["asteroid_path"]) == 12
+            
+            # Verify trajectories are valid
+            assert result["asteroid_path"]
+            assert result["earth_path"]
+            
+            # Successfully synchronized trajectories for this asteroid configuration
+            print(f"Successfully synchronized trajectories for asteroid {i+1}: epoch={elements.epoch}")
+    
+    def test_shared_time_range_generation(self):
+        """Test shared time range generation and validation."""
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        # Test different numbers of points
+        test_points = [10, 24, 50, 100]
+        
+        for num_points in test_points:
+            result = calculate_both_trajectories(elements, num_points=num_points)
+            
+            # Verify correct number of points
+            assert len(result["asteroid_path"]) == num_points
+            assert len(result["earth_path"]) == num_points
+            
+            # Verify trajectories are synchronized (same length)
+            assert len(result["asteroid_path"]) == len(result["earth_path"])
+    
+    def test_time_range_validation(self):
+        """Test validation of time range parameters."""
+        # Test create_time_range function directly
+        epoch_time = Time(2461000.5, format='jd')
+        end_time = epoch_time + 2 * u.year
+        
+        # Test valid time range
+        times = create_time_range(epoch_time, end_time, 10)
+        assert len(times) == 10
+        assert all(isinstance(t, Time) for t in times)
+        assert times[0] == epoch_time
+        assert times[-1] == end_time
+        
+        # Test invalid parameters
+        with pytest.raises(ImpactCalculationError, match="num_points must be at least 2"):
+            create_time_range(epoch_time, end_time, 1)
+        
+        with pytest.raises(ImpactCalculationError, match="num_points too large"):
+            create_time_range(epoch_time, end_time, 20000)
+        
+        with pytest.raises(ImpactCalculationError, match="end_time.*must be after start_time"):
+            create_time_range(end_time, epoch_time, 10)  # Reversed times
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid num_points"):
+            create_time_range(epoch_time, end_time, -5)
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid num_points"):
+            create_time_range(epoch_time, end_time, 0)
+    
+    def test_invalid_epoch_error_handling(self):
+        """Test error handling for invalid epochs and synchronization failures."""
+        # Test with invalid epoch (NaN)
+        elements_nan_epoch = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=float('nan')
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid epoch value.*Must be a finite Julian date"):
+            calculate_both_trajectories(elements_nan_epoch)
+        
+        # Test with invalid epoch (infinity)
+        elements_inf_epoch = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=float('inf')
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid epoch value.*Must be a finite Julian date"):
+            calculate_both_trajectories(elements_inf_epoch)
+        
+        # Test with epoch outside reasonable range (too old)
+        elements_old_epoch = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2000000.0  # Too old (before 1900 AD)
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Epoch.*is outside reasonable range"):
+            calculate_both_trajectories(elements_old_epoch)
+        
+        # Test with epoch outside reasonable range (too new)
+        elements_future_epoch = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2600000.0  # Too new (after 2100 AD)
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Epoch.*is outside reasonable range"):
+            calculate_both_trajectories(elements_future_epoch)
+    
+    def test_synchronization_failure_scenarios(self):
+        """Test error handling for synchronization failures."""
+        # Test with invalid orbital elements type
+        with pytest.raises(ImpactCalculationError, match="Invalid orbital_elements type"):
+            calculate_both_trajectories("invalid_elements")
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid orbital_elements type"):
+            calculate_both_trajectories(None)
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid orbital_elements type"):
+            calculate_both_trajectories({"not": "orbital_elements"})
+        
+        # Test with invalid num_points
+        valid_elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid num_points"):
+            calculate_both_trajectories(valid_elements, num_points=0)
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid num_points"):
+            calculate_both_trajectories(valid_elements, num_points=-10)
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid num_points"):
+            calculate_both_trajectories(valid_elements, num_points="invalid")
+    
+    def test_earth_trajectory_with_custom_times(self):
+        """Test Earth trajectory calculation with custom time arrays."""
+        # Create custom time array
+        epoch_time = Time(2461000.5, format='jd')
+        end_time = epoch_time + 1 * u.year
+        custom_times = create_time_range(epoch_time, end_time, 15)
+        
+        # Test Earth trajectory with custom times
+        earth_trajectory = get_earth_trajectory(custom_times)
+        
+        # Verify trajectory properties
+        assert len(earth_trajectory) == 15
+        assert all(isinstance(coord, list) for coord in earth_trajectory)
+        assert all(len(coord) == 3 for coord in earth_trajectory)
+        assert all(all(isinstance(x, float) for x in coord) for coord in earth_trajectory)
+        assert all(all(math.isfinite(x) for x in coord) for coord in earth_trajectory)
+        
+        # Verify Earth's orbit is approximately 1 AU from Sun
+        for coord in earth_trajectory:
+            distance = math.sqrt(sum(x**2 for x in coord))
+            assert distance == pytest.approx(1.0, abs=0.3)  # Allow variation for elliptical orbit
+    
+    def test_asteroid_trajectory_with_custom_times(self):
+        """Test asteroid trajectory calculation with custom time arrays."""
+        elements = OrbitalElements(
+            semi_major_axis=1.5,
+            eccentricity=0.2,
+            inclination=10.0,
+            longitude_ascending_node=150.0,
+            argument_periapsis=250.0,
+            mean_anomaly=100.0,
+            epoch=2461000.5
+        )
+        
+        # Create custom time array
+        epoch_time = Time(elements.epoch, format='jd')
+        end_time = epoch_time + 180 * u.day  # Approximately 6 months
+        custom_times = create_time_range(epoch_time, end_time, 25)
+        
+        # Test asteroid trajectory with custom times
+        asteroid_trajectory = calculate_trajectory(elements, times=custom_times)
+        
+        # Verify trajectory properties
+        assert len(asteroid_trajectory) == 25
+        assert all(isinstance(coord, list) for coord in asteroid_trajectory)
+        assert all(len(coord) == 3 for coord in asteroid_trajectory)
+        assert all(all(isinstance(x, float) for x in coord) for coord in asteroid_trajectory)
+        assert all(all(math.isfinite(x) for x in coord) for coord in asteroid_trajectory)
+        
+        # Verify asteroid positions are within reasonable bounds
+        for coord in asteroid_trajectory:
+            distance = math.sqrt(sum(x**2 for x in coord))
+            assert distance < 5.0  # Should be within 5 AU of Sun
+    
+    def test_time_synchronization_consistency(self):
+        """Test that synchronized trajectories maintain time consistency."""
+        elements = OrbitalElements(
+            semi_major_axis=1.2,
+            eccentricity=0.15,
+            inclination=8.0,
+            longitude_ascending_node=120.0,
+            argument_periapsis=240.0,
+            mean_anomaly=60.0,
+            epoch=2461000.5
+        )
+        
+        # Calculate synchronized trajectories multiple times
+        results = []
+        for _ in range(3):
+            result = calculate_both_trajectories(elements, num_points=20)
+            results.append(result)
+        
+        # Verify all results have consistent structure
+        for result in results:
+            assert len(result["asteroid_path"]) == 20
+            assert len(result["earth_path"]) == 20
+            assert len(result["asteroid_path"]) == len(result["earth_path"])
+        
+        # Verify trajectories are deterministic (same inputs produce same outputs)
+        for i in range(1, len(results)):
+            for j in range(20):
+                # Asteroid trajectories should be identical
+                for k in range(3):
+                    assert results[0]["asteroid_path"][j][k] == pytest.approx(
+                        results[i]["asteroid_path"][j][k], abs=1e-10
+                    )
+                
+                # Earth trajectories should be identical
+                for k in range(3):
+                    assert results[0]["earth_path"][j][k] == pytest.approx(
+                        results[i]["earth_path"][j][k], abs=1e-10
+                    )
+    
+    def test_empty_times_array_error_handling(self):
+        """Test error handling for empty times arrays."""
+        # Test get_earth_trajectory with empty times
+        with pytest.raises(ImpactCalculationError, match="Empty times array provided"):
+            get_earth_trajectory([])
+        
+        # Test calculate_trajectory with empty times
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        with pytest.raises(OrbitalCalculationError, match="Provided times array is empty"):
+            calculate_trajectory(elements, times=[])
+    
+    def test_invalid_times_array_error_handling(self):
+        """Test error handling for invalid times arrays."""
+        # Test get_earth_trajectory with invalid times array type
+        with pytest.raises(ImpactCalculationError, match="Invalid times type"):
+            get_earth_trajectory("not_a_list")
+        
+        with pytest.raises(ImpactCalculationError, match="Empty times array provided"):
+            get_earth_trajectory(None)
+        
+        # Test get_earth_trajectory with invalid time objects in array
+        with pytest.raises(ImpactCalculationError, match="Invalid time object"):
+            get_earth_trajectory(["not_a_time", "also_not_a_time"])
+        
+        with pytest.raises(ImpactCalculationError, match="Invalid time object"):
+            get_earth_trajectory([Time.now(), "invalid_time", Time.now()])
+    
+    def test_trajectory_coordinate_validation(self):
+        """Test validation of trajectory coordinate outputs."""
+        elements = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2461000.5
+        )
+        
+        result = calculate_both_trajectories(elements, num_points=10)
+        
+        # Validate asteroid trajectory coordinates
+        for i, coord in enumerate(result["asteroid_path"]):
+            assert isinstance(coord, list), f"Asteroid coordinate {i} is not a list: {type(coord)}"
+            assert len(coord) == 3, f"Asteroid coordinate {i} does not have 3 elements: {len(coord)}"
+            
+            for j, value in enumerate(coord):
+                assert isinstance(value, float), f"Asteroid coordinate {i}[{j}] is not float: {type(value)}"
+                assert math.isfinite(value), f"Asteroid coordinate {i}[{j}] is not finite: {value}"
+        
+        # Validate Earth trajectory coordinates
+        for i, coord in enumerate(result["earth_path"]):
+            assert isinstance(coord, list), f"Earth coordinate {i} is not a list: {type(coord)}"
+            assert len(coord) == 3, f"Earth coordinate {i} does not have 3 elements: {len(coord)}"
+            
+            for j, value in enumerate(coord):
+                assert isinstance(value, float), f"Earth coordinate {i}[{j}] is not float: {type(value)}"
+                assert math.isfinite(value), f"Earth coordinate {i}[{j}] is not finite: {value}"
+    
+    def test_epoch_time_validation_edge_cases(self):
+        """Test epoch time validation with edge cases."""
+        # Test with epoch at boundary of reasonable range (1900 AD)
+        elements_1900 = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2415020.5  # January 1, 1900
+        )
+        
+        # Should succeed
+        result = calculate_both_trajectories(elements_1900, num_points=5)
+        assert len(result["asteroid_path"]) == 5
+        assert len(result["earth_path"]) == 5
+        
+        # Test with epoch at boundary of reasonable range (2100 AD)
+        elements_2100 = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2488070.5  # January 1, 2100
+        )
+        
+        # Should succeed
+        result = calculate_both_trajectories(elements_2100, num_points=5)
+        assert len(result["asteroid_path"]) == 5
+        assert len(result["earth_path"]) == 5
+        
+        # Test with epoch just outside reasonable range (before 1900)
+        elements_too_old = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2415020.4  # Just before 1900
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Epoch.*is outside reasonable range"):
+            calculate_both_trajectories(elements_too_old)
+        
+        # Test with epoch just outside reasonable range (after 2100)
+        elements_too_new = OrbitalElements(
+            semi_major_axis=1.0,
+            eccentricity=0.1,
+            inclination=5.0,
+            longitude_ascending_node=100.0,
+            argument_periapsis=200.0,
+            mean_anomaly=300.0,
+            epoch=2488070.6  # Just after 2100
+        )
+        
+        with pytest.raises(ImpactCalculationError, match="Epoch.*is outside reasonable range"):
+            calculate_both_trajectories(elements_too_new)

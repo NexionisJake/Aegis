@@ -2,9 +2,10 @@ import React from 'react'
 import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
-const ImpactMap = ({ impactData, onBackTo3D }) => {
-  // Predefined impact coordinates (New York City area for demonstration)
-  const impactCoordinates = [40.7128, -74.0060]
+const ImpactMap = ({ impactData, impactCoordinates, onBackTo3D }) => {
+  // Use dynamic impact coordinates passed from parent component
+  // Default to India coordinates if not provided (fallback safety)
+  const coordinates = impactCoordinates || [20.5937, 78.9629]
   
   // Calculate crater radius in meters for map visualization
   const craterRadiusMeters = impactData?.craterDiameterMeters ? impactData.craterDiameterMeters / 2 : 0
@@ -62,7 +63,7 @@ const ImpactMap = ({ impactData, onBackTo3D }) => {
 
       {/* Leaflet Map */}
       <MapContainer
-        center={impactCoordinates}
+        center={coordinates}
         zoom={10}
         style={{ width: '100%', height: '100%' }}
         zoomControl={true}
@@ -77,7 +78,7 @@ const ImpactMap = ({ impactData, onBackTo3D }) => {
         {/* Impact crater circle */}
         {impactData && craterRadiusMeters > 0 && (
           <Circle
-            center={impactCoordinates}
+            center={coordinates}
             radius={craterRadiusMeters}
             pathOptions={{
               color: '#ff4444',

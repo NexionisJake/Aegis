@@ -125,11 +125,50 @@ describe('ImpactMap', () => {
     // The radius should be half the diameter (1000 meters)
   })
 
-  it('uses predefined impact coordinates', () => {
-    render(<ImpactMap impactData={mockImpactData} onBackTo3D={mockOnBackTo3D} />)
+  it('accepts and uses dynamic impact coordinates prop', () => {
+    const customCoordinates = [51.5074, -0.1278] // London coordinates
     
+    // Test that the component accepts the impactCoordinates prop without errors
+    expect(() => {
+      render(
+        <ImpactMap 
+          impactData={mockImpactData} 
+          impactCoordinates={customCoordinates}
+          onBackTo3D={mockOnBackTo3D} 
+        />
+      )
+    }).not.toThrow()
+    
+    // Verify the component renders successfully with custom coordinates
     const mapContainer = screen.getByTestId('map-container')
     expect(mapContainer).toBeInTheDocument()
-    // The component should use NYC coordinates [40.7128, -74.0060]
+  })
+
+  it('uses default coordinates when impactCoordinates prop is not provided', () => {
+    // Test that the component works without impactCoordinates prop
+    expect(() => {
+      render(<ImpactMap impactData={mockImpactData} onBackTo3D={mockOnBackTo3D} />)
+    }).not.toThrow()
+    
+    // Verify the component renders successfully with default coordinates
+    const mapContainer = screen.getByTestId('map-container')
+    expect(mapContainer).toBeInTheDocument()
+  })
+
+  it('handles null impactCoordinates gracefully', () => {
+    // Test that the component handles null coordinates
+    expect(() => {
+      render(
+        <ImpactMap 
+          impactData={mockImpactData} 
+          impactCoordinates={null}
+          onBackTo3D={mockOnBackTo3D} 
+        />
+      )
+    }).not.toThrow()
+    
+    // Verify the component renders successfully with null coordinates (should use default)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(mapContainer).toBeInTheDocument()
   })
 })

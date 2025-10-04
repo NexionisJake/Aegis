@@ -3,9 +3,35 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import axios from 'axios'
 import App from '../App'
 
-// Mock axios
-vi.mock('axios')
-const mockedAxios = vi.mocked(axios)
+// Mock the enhanced API client
+vi.mock('../utils/apiClient', () => ({
+  enhancedApi: {
+    getTrajectory: vi.fn(),
+    getAsteroid: vi.fn(),
+    calculateImpact: vi.fn(),
+    getCircuitBreakerState: vi.fn(() => ({ state: 'CLOSED', failureCount: 0 }))
+  },
+  api: {
+    getTrajectory: vi.fn(),
+    getAsteroid: vi.fn(),
+    calculateImpact: vi.fn()
+  },
+  APIError: class APIError extends Error {
+    constructor(message, status) {
+      super(message)
+      this.status = status
+    }
+  },
+  NetworkError: class NetworkError extends Error {},
+  TimeoutError: class TimeoutError extends Error {}
+}))
+
+const mockEnhancedApi = {
+  getTrajectory: vi.fn(),
+  getAsteroid: vi.fn(),
+  calculateImpact: vi.fn(),
+  getCircuitBreakerState: vi.fn(() => ({ state: 'CLOSED', failureCount: 0 }))
+}
 
 // Mock the 3D and Map components to avoid WebGL/Leaflet dependencies
 vi.mock('../components/Scene3D', () => ({
@@ -33,21 +59,8 @@ vi.mock('../components/ImpactMap', () => ({
 }))
 
 describe('Error Handling Integration Tests', () => {
-  let mockApiClient
-
   beforeEach(() => {
     vi.clearAllMocks()
-    
-    mockApiClient = {
-      get: vi.fn(),
-      post: vi.fn(),
-      interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() }
-      }
-    }
-    
-    mockedAxios.create.mockReturnValue(mockApiClient)
     
     // Mock console methods to avoid noise in tests
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -61,9 +74,11 @@ describe('Error Handling Integration Tests', () => {
 
   describe('Network Error Scenarios', () => {
     it('handles connection errors gracefully', async () => {
-      const connectionError = new Error('Network Error')
-      connectionError.code = 'ECONNREFUSED'
-      mockApiClient.get.mockRejectedValue(connectionError)
+      const { NetworkError } = await import('../utils/apiClient')
+      const connectionError = new NetworkError('Network Error')
+      
+      mockEnhancedApi.getAsteroid.mockRejectedValue(connectionError)
+      mockEnhancedApi.getTrajectory.mockRejectedValue(connectionError)
 
       render(<App />)
 
@@ -77,9 +92,11 @@ describe('Error Handling Integration Tests', () => {
     })
 
     it('handles timeout errors with appropriate messaging', async () => {
-      const timeoutError = new Error('timeout of 30000ms exceeded')
-      timeoutError.code = 'ECONNABORTED'
-      mockApiClient.get.mockRejectedValue(timeoutError)
+      const { TimeoutError } = await import('../utils/apiClient')
+      const timeoutError = new TimeoutError('timeout of 30000ms exceeded')
+      
+      mockEnhancedApi.getAsteroid.mockRejectedValue(timeoutError)
+      mockEnhancedApi.getTrajectory.mockRejectedValue(timeoutError)
 
       render(<App />)
 
@@ -94,10 +111,23 @@ describe('Error Handling Integration Tests', () => {
       const networkError = new Error('Network Error')
       networkError.code = 'ECONNRESET'
       
-      // First call fails, second succeeds
+      // First calls fail, then both succeed
       mockApiClient.get
-        .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({
+        .mockRejectedValueOnce(networkError)  // First asteroid call fails
+        .mockRejectedValueOnce(networkError)  // First trajectory call fails
+        .mockResolvedValueOnce({              // Second asteroid call succeeds
+          data: {
+            phys_par: [
+              { name: 'diameter', value: '0.34', unit: 'km' }
+            ],
+            orbit: {
+              close_approach_data: [
+                { v_rel: '7.42', date: '2029-04-13' }
+              ]
+            }
+          }
+        })
+        .mockResolvedValueOnce({              // Second trajectory call succeeds
           data: {
             asteroid_path: [[1, 2, 3]],
             earth_path: [[4, 5, 6]]
@@ -189,13 +219,26 @@ describe('Error Handling Integration Tests', () => {
 
   describe('Impact Calculation Error Scenarios', () => {
     it('handles impact calculation errors while preserving trajectory data', async () => {
-      // Successful trajectory fetch
-      mockApiClient.get.mockResolvedValue({
-        data: {
-          asteroid_path: [[1, 2, 3]],
-          earth_path: [[4, 5, 6]]
-        }
-      })
+      // Successful asteroid and trajectory fetch
+      mockApiClient.get
+        .mockResolvedValueOnce({  // Asteroid data
+          data: {
+            phys_par: [
+              { name: 'diameter', value: '0.34', unit: 'km' }
+            ],
+            orbit: {
+              close_approach_data: [
+                { v_rel: '7.42', date: '2029-04-13' }
+              ]
+            }
+          }
+        })
+        .mockResolvedValueOnce({  // Trajectory data
+          data: {
+            asteroid_path: [[1, 2, 3]],
+            earth_path: [[4, 5, 6]]
+          }
+        })
 
       // Failed impact calculation
       const impactError = new Error('Request failed')
@@ -278,10 +321,23 @@ describe('Error Handling Integration Tests', () => {
       const temporaryError = new Error('Temporary failure')
       temporaryError.response = { status: 500 }
 
-      // First call fails, second succeeds
+      // First calls fail, then both succeed
       mockApiClient.get
-        .mockRejectedValueOnce(temporaryError)
-        .mockResolvedValueOnce({
+        .mockRejectedValueOnce(temporaryError)  // First asteroid call fails
+        .mockRejectedValueOnce(temporaryError)  // First trajectory call fails
+        .mockResolvedValueOnce({                // Second asteroid call succeeds
+          data: {
+            phys_par: [
+              { name: 'diameter', value: '0.34', unit: 'km' }
+            ],
+            orbit: {
+              close_approach_data: [
+                { v_rel: '7.42', date: '2029-04-13' }
+              ]
+            }
+          }
+        })
+        .mockResolvedValueOnce({                // Second trajectory call succeeds
           data: {
             asteroid_path: [[1, 2, 3]],
             earth_path: [[4, 5, 6]]
@@ -381,8 +437,21 @@ describe('Error Handling Integration Tests', () => {
 
       // Initial failure, then success for both calls
       mockApiClient.get
-        .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({ data: trajectoryData })
+        .mockRejectedValueOnce(networkError)  // First asteroid call fails
+        .mockRejectedValueOnce(networkError)  // First trajectory call fails
+        .mockResolvedValueOnce({              // Second asteroid call succeeds
+          data: {
+            phys_par: [
+              { name: 'diameter', value: '0.34', unit: 'km' }
+            ],
+            orbit: {
+              close_approach_data: [
+                { v_rel: '7.42', date: '2029-04-13' }
+              ]
+            }
+          }
+        })
+        .mockResolvedValueOnce({ data: trajectoryData })  // Second trajectory call succeeds
       
       mockApiClient.post.mockResolvedValue({ data: impactData })
 

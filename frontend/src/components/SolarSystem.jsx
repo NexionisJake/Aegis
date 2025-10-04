@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useCallback } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Sphere } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -59,7 +59,7 @@ const CoordinateProcessor = {
   }
 }
 
-const SolarSystem = React.memo(({ trajectory }) => {
+const SolarSystem = React.memo(({ trajectory, onImpactSelect }) => {
   const earthRef = useRef()
   const asteroidRef = useRef()
   const earthLineRef = useRef()
@@ -69,6 +69,111 @@ const SolarSystem = React.memo(({ trajectory }) => {
     asteroidIndex: 0,
     lastUpdate: 0
   })
+
+  // Three.js context for raycasting
+  const { camera, gl } = useThree()
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const mouse = useMemo(() => new THREE.Vector2(), [])
+
+  // Convert 3D intersection point to geographic latitude/longitude coordinates
+  const convertToLatLng = useCallback((point, radius = 0.12) => {
+    if (!point || typeof point.x !== 'number' || typeof point.y !== 'number' || typeof point.z !== 'number') {
+      throw new Error('Invalid 3D point provided for coordinate conversion')
+    }
+
+    if (radius <= 0) {
+      throw new Error('Invalid radius provided for coordinate conversion')
+    }
+
+    // Normalize the point to unit sphere for accurate coordinate calculation
+    const normalizedPoint = point.clone().normalize()
+    
+    // Calculate latitude using Math.asin(point.y / radius) * (180 / Math.PI)
+    // Since we normalized the point, radius is effectively 1
+    const latitude = Math.asin(normalizedPoint.y) * (180 / Math.PI)
+    
+    // Calculate longitude using Math.atan2(point.z, point.x) * (180 / Math.PI)
+    const longitude = Math.atan2(normalizedPoint.z, normalizedPoint.x) * (180 / Math.PI)
+    
+    // Validate and ensure coordinates are within valid Earth surface bounds
+    const clampedLatitude = Math.max(-90, Math.min(90, latitude))
+    const clampedLongitude = Math.max(-180, Math.min(180, longitude))
+    
+    // Additional validation to ensure we have valid numeric coordinates
+    if (isNaN(clampedLatitude) || isNaN(clampedLongitude)) {
+      throw new Error('Coordinate conversion resulted in invalid values')
+    }
+    
+    return [clampedLatitude, clampedLongitude]
+  }, [])
+
+  // Handle Earth click for impact location selection
+  const handleEarthClick = useCallback((event) => {
+    if (!onImpactSelect || !earthRef.current) return
+
+    event.stopPropagation()
+
+    // Calculate mouse position in normalized device coordinates (-1 to +1)
+    const rect = gl.domElement.getBoundingClientRect()
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+    // Update raycaster
+    raycaster.setFromCamera(mouse, camera)
+
+    // Check for intersection with Earth mesh
+    const intersects = raycaster.intersectObject(earthRef.current, true)
+    
+    if (intersects.length > 0) {
+      const intersection = intersects[0]
+      const point = intersection.point
+      
+      try {
+        // Convert 3D intersection point to latitude/longitude using dedicated function
+        const coordinates = convertToLatLng(point, 0.12)
+        
+        // Add visual feedback and console logging to confirm impact location selection
+        console.log('🌍 Impact location selected:', {
+          coordinates: coordinates,
+          latitude: coordinates[0].toFixed(4),
+          longitude: coordinates[1].toFixed(4),
+          intersectionPoint: {
+            x: point.x.toFixed(4),
+            y: point.y.toFixed(4),
+            z: point.z.toFixed(4)
+          }
+        })
+        
+        // Call the callback with the new coordinates
+        onImpactSelect(coordinates)
+        
+        // Visual feedback: briefly highlight the Earth to show selection was registered
+        if (earthRef.current && earthRef.current.material) {
+          const originalEmissive = earthRef.current.material.emissive.clone()
+          const originalEmissiveIntensity = earthRef.current.material.emissiveIntensity
+          
+          // Flash the Earth with a brief highlight
+          earthRef.current.material.emissive.setHex(0x00ff00)
+          earthRef.current.material.emissiveIntensity = 0.3
+          
+          // Reset after a short delay
+          setTimeout(() => {
+            if (earthRef.current && earthRef.current.material) {
+              earthRef.current.material.emissive.copy(originalEmissive)
+              earthRef.current.material.emissiveIntensity = originalEmissiveIntensity
+            }
+          }, 200)
+        }
+        
+      } catch (error) {
+        console.error('Failed to convert 3D coordinates to lat/lng:', error)
+        // Optionally provide fallback coordinates or user feedback
+      }
+    } else {
+      // Log when click doesn't hit Earth for debugging
+      console.log('🌍 Click detected but no Earth intersection found')
+    }
+  }, [onImpactSelect, camera, gl, raycaster, mouse, convertToLatLng])
 
   // Optimized geometry creation with efficient memory usage
   const geometryData = useMemo(() => {
@@ -254,6 +359,7 @@ const SolarSystem = React.memo(({ trajectory }) => {
         ref={earthRef}
         args={[0.12, 16, 16]} 
         position={earthPosition}
+        onClick={handleEarthClick}
       >
         <meshStandardMaterial 
           color="#4A90E2"

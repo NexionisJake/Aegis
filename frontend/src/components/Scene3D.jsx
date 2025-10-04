@@ -13,7 +13,7 @@ const LoadingFallback = () => (
   </mesh>
 )
 
-const Scene3D = React.memo(({ trajectory, onSimulateImpact }) => {
+const Scene3D = React.memo(({ trajectory, onSimulateImpact, onImpactSelect }) => {
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(
     process.env.NODE_ENV === 'development'
   )
@@ -114,6 +114,7 @@ const Scene3D = React.memo(({ trajectory, onSimulateImpact }) => {
             trajectory={trajectory} 
             qualityLevel={qualityLevel}
             onPerformanceChange={handlePerformanceChange}
+            onImpactSelect={onImpactSelect}
           />
         </Suspense>
         

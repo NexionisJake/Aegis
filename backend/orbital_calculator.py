@@ -11,6 +11,9 @@ from astropy.time import Time
 from poliastro.bodies import Sun, Earth
 from poliastro.twobody import Orbit
 
+# Import ImpactCalculationError for orbital synchronization errors
+from impact_calculator import ImpactCalculationError
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,11 +60,26 @@ def extract_orbital_elements(nasa_response: Dict[str, Any]) -> OrbitalElements:
         if "epoch" not in orbit_data:
             raise OrbitalCalculationError("Missing 'epoch' in orbit data")
         
-        # Extract epoch
+        # Extract epoch with enhanced validation
         try:
             epoch = float(orbit_data["epoch"])
-        except (ValueError, TypeError):
-            raise OrbitalCalculationError(f"Invalid epoch value: {orbit_data['epoch']}")
+            
+            # Validate epoch is finite
+            if not math.isfinite(epoch):
+                raise ImpactCalculationError(f"Invalid epoch time: {epoch}. Must be a finite Julian date number")
+            
+            # Validate epoch is within reasonable range (1900-2100 AD approximately)
+            if epoch < 2415020.5 or epoch > 2488070.5:
+                raise ImpactCalculationError(
+                    f"Epoch {epoch} is outside reasonable range (1900-2100 AD). "
+                    f"Expected Julian date between 2415020.5 and 2488070.5"
+                )
+                
+        except (ValueError, TypeError) as e:
+            raise ImpactCalculationError(f"Invalid epoch value '{orbit_data['epoch']}': {str(e)}. Must be a numeric Julian date")
+        except ImpactCalculationError:
+            # Re-raise our custom exceptions
+            raise
         
         # Create dictionary of orbital elements for easy lookup
         elements_dict = {}
@@ -199,26 +217,74 @@ def create_time_range(start_time: Time, end_time: Time, num_points: int) -> List
         
     Returns:
         List of Time objects
+        
+    Raises:
+        ImpactCalculationError: If time range generation fails or parameters are invalid
     """
-    # Calculate time step
-    total_duration = (end_time - start_time).to(u.day).value
-    time_step = total_duration / (num_points - 1)
-    
-    times = []
-    for i in range(num_points):
-        time_offset = i * time_step * u.day
-        times.append(start_time + time_offset)
-    
-    return times
+    try:
+        # Validate input parameters
+        if not isinstance(start_time, Time):
+            raise ImpactCalculationError(f"Invalid start_time type: {type(start_time)}. Must be astropy.time.Time")
+        
+        if not isinstance(end_time, Time):
+            raise ImpactCalculationError(f"Invalid end_time type: {type(end_time)}. Must be astropy.time.Time")
+        
+        if not isinstance(num_points, int) or num_points <= 0:
+            raise ImpactCalculationError(f"Invalid num_points: {num_points}. Must be a positive integer")
+        
+        if num_points < 2:
+            raise ImpactCalculationError(f"num_points must be at least 2, got: {num_points}")
+        
+        if num_points > 10000:  # Sanity check to prevent memory issues
+            raise ImpactCalculationError(f"num_points too large: {num_points}. Maximum allowed is 10000")
+        
+        # Validate time ordering
+        if end_time <= start_time:
+            raise ImpactCalculationError(f"end_time ({end_time}) must be after start_time ({start_time})")
+        
+        # Calculate time step
+        total_duration = (end_time - start_time).to(u.day).value
+        
+        if not math.isfinite(total_duration) or total_duration <= 0:
+            raise ImpactCalculationError(f"Invalid time duration: {total_duration} days")
+        
+        time_step = total_duration / (num_points - 1)
+        
+        # Generate time array
+        times = []
+        for i in range(num_points):
+            try:
+                time_offset = i * time_step * u.day
+                new_time = start_time + time_offset
+                times.append(new_time)
+            except Exception as e:
+                raise ImpactCalculationError(f"Failed to generate time point {i}: {str(e)}")
+        
+        # Validate generated time array
+        if len(times) != num_points:
+            raise ImpactCalculationError(f"Generated {len(times)} time points, expected {num_points}")
+        
+        if not times:
+            raise ImpactCalculationError("Generated empty time array")
+        
+        logger.info(f"Successfully created time range with {len(times)} points from {start_time} to {end_time}")
+        return times
+        
+    except ImpactCalculationError:
+        # Re-raise our custom exceptions
+        raise
+    except Exception as e:
+        raise ImpactCalculationError(f"Unexpected error creating time range: {str(e)}")
 
 
-def calculate_trajectory(orbital_elements: OrbitalElements, num_points: int = 365) -> List[List[float]]:
+def calculate_trajectory(orbital_elements: OrbitalElements, num_points: int = 365, times: Optional[List[Time]] = None) -> List[List[float]]:
     """
     Calculate trajectory coordinates using poliastro orbital mechanics.
     
     Args:
         orbital_elements: OrbitalElements object with orbital parameters
-        num_points: Number of coordinate points to generate (default: 365)
+        num_points: Number of coordinate points to generate (default: 365, ignored if times provided)
+        times: Optional list of Time objects for trajectory calculation. If provided, overrides num_points
         
     Returns:
         List of [x, y, z] coordinate arrays in AU units
@@ -248,14 +314,23 @@ def calculate_trajectory(orbital_elements: OrbitalElements, num_points: int = 36
         # Calculate orbital period
         period = orbit.period
         
-        # Generate time range over 2 years
-        time_span = 2 * u.year
-        end_time = epoch_time + time_span
-        times = create_time_range(epoch_time, end_time, num_points)
+        # Use provided times array or generate time range
+        if times is not None:
+            # Use provided time array
+            if not times:
+                raise OrbitalCalculationError("Provided times array is empty")
+            trajectory_times = times
+            logger.info(f"Using provided time array with {len(times)} points")
+        else:
+            # Generate time range over 2 years for backward compatibility
+            time_span = 2 * u.year
+            end_time = epoch_time + time_span
+            trajectory_times = create_time_range(epoch_time, end_time, num_points)
+            logger.info(f"Generated internal time range with {num_points} points over 2 years")
         
         # Propagate orbit to get positions at each time
         coordinates = []
-        for time in times:
+        for time in trajectory_times:
             try:
                 # Propagate orbit to the specific time
                 propagated_orbit = orbit.propagate(time - epoch_time)
@@ -281,74 +356,120 @@ def calculate_trajectory(orbital_elements: OrbitalElements, num_points: int = 36
         raise OrbitalCalculationError(f"Trajectory calculation failed: {str(e)}")
 
 
-def get_earth_trajectory(num_points: int = 365) -> List[List[float]]:
+def get_earth_trajectory(times: List[Time]) -> List[List[float]]:
     """
-    Calculate Earth's orbital trajectory using poliastro.
+    Calculate Earth's orbital trajectory using poliastro ephemeris data.
     
     Args:
-        num_points: Number of coordinate points to generate (default: 365)
+        times: List of Time objects for which to calculate Earth's position
         
     Returns:
         List of [x, y, z] coordinate arrays in AU units
         
     Raises:
-        OrbitalCalculationError: If Earth trajectory calculation fails
+        ImpactCalculationError: If Earth trajectory calculation fails
     """
     try:
-        # Use current time as epoch
-        epoch_time = Time.now()
+        # Validate input times array
+        if not times:
+            raise ImpactCalculationError("Empty times array provided for Earth trajectory calculation")
         
-        # Create Earth's orbit using built-in orbital elements
-        # Earth's approximate orbital elements (simplified)
-        earth_orbit = Orbit.from_classical(
-            attractor=Sun,
-            a=1.0 * u.au,           # Earth's semi-major axis
-            ecc=0.0167 * u.one,     # Earth's eccentricity
-            inc=0.0 * u.deg,        # Earth's inclination (reference plane)
-            raan=0.0 * u.deg,       # Longitude of ascending node
-            argp=0.0 * u.deg,       # Argument of periapsis
-            nu=0.0 * u.deg,         # True anomaly at epoch
-            epoch=epoch_time
-        )
+        if not isinstance(times, list):
+            raise ImpactCalculationError(f"Invalid times type: {type(times)}. Must be a list of astropy.time.Time objects")
         
-        # Generate time range over 2 years
-        time_span = 2 * u.year
-        end_time = epoch_time + time_span
-        times = create_time_range(epoch_time, end_time, num_points)
+        # Validate each time object
+        for i, time in enumerate(times):
+            if not isinstance(time, Time):
+                raise ImpactCalculationError(f"Invalid time object at index {i}: {type(time)}. Must be astropy.time.Time")
         
-        # Calculate Earth's positions
+        logger.info(f"Calculating Earth trajectory for {len(times)} time points")
+        
+        # Calculate Earth's positions using accurate ephemeris data
         coordinates = []
-        for time in times:
+        ephemeris_failures = 0
+        
+        for i, time in enumerate(times):
             try:
-                # Propagate Earth's orbit
-                propagated_orbit = earth_orbit.propagate(time - epoch_time)
+                # Use poliastro's built-in ephemeris data for Earth
+                earth_orbit = Orbit.from_body_ephem(Earth, time)
                 
                 # Get position vector in AU
-                position = propagated_orbit.r.to(u.au).value
+                position = earth_orbit.r.to(u.au).value
+                
+                # Validate position values
+                if not all(math.isfinite(pos) for pos in position):
+                    raise ValueError(f"Non-finite position values: {position}")
                 
                 # Convert to list format [x, y, z]
                 coordinates.append([float(position[0]), float(position[1]), float(position[2])])
                 
             except Exception as e:
-                logger.warning(f"Failed to propagate Earth orbit at time {time}: {str(e)}")
+                ephemeris_failures += 1
+                logger.warning(f"Failed to get Earth ephemeris at time {time} (point {i+1}/{len(times)}): {str(e)}")
+                
                 # Use circular approximation as fallback
-                days_from_epoch = (time - epoch_time).to(u.day).value
-                angle = 2 * math.pi * days_from_epoch / 365.25  # Earth's orbital period
-                x = math.cos(angle)
-                y = math.sin(angle)
-                z = 0.0
-                coordinates.append([x, y, z])
+                try:
+                    if len(times) > 1:
+                        # Calculate approximate position based on time from first epoch
+                        days_from_epoch = (time - times[0]).to(u.day).value
+                        
+                        if not math.isfinite(days_from_epoch):
+                            raise ValueError(f"Invalid days_from_epoch: {days_from_epoch}")
+                        
+                        angle = 2 * math.pi * days_from_epoch / 365.25  # Earth's orbital period
+                        x = math.cos(angle)
+                        y = math.sin(angle)
+                        z = 0.0
+                        
+                        # Validate fallback values
+                        if not all(math.isfinite(val) for val in [x, y, z]):
+                            raise ValueError(f"Non-finite fallback values: [{x}, {y}, {z}]")
+                        
+                        coordinates.append([x, y, z])
+                    else:
+                        # Single time point fallback
+                        coordinates.append([1.0, 0.0, 0.0])
+                        
+                except Exception as fallback_error:
+                    raise ImpactCalculationError(
+                        f"Both ephemeris and fallback calculations failed at time {time}: "
+                        f"ephemeris_error='{str(e)}', fallback_error='{str(fallback_error)}'"
+                    )
         
-        logger.info(f"Successfully calculated {len(coordinates)} Earth trajectory points")
+        # Validate final results
+        if not coordinates:
+            raise ImpactCalculationError("No valid Earth trajectory points calculated")
+        
+        if len(coordinates) != len(times):
+            raise ImpactCalculationError(
+                f"Coordinate count mismatch: calculated {len(coordinates)} points, expected {len(times)}"
+            )
+        
+        # Log ephemeris failure rate
+        if ephemeris_failures > 0:
+            failure_rate = (ephemeris_failures / len(times)) * 100
+            logger.warning(f"Earth ephemeris failed for {ephemeris_failures}/{len(times)} points ({failure_rate:.1f}%)")
+            
+            # If too many ephemeris failures, raise an error
+            if failure_rate > 50:
+                raise ImpactCalculationError(
+                    f"Earth ephemeris data unavailable for {failure_rate:.1f}% of time points. "
+                    "This may indicate invalid time range or poliastro data issues."
+                )
+        
+        logger.info(f"Successfully calculated {len(coordinates)} Earth trajectory points using ephemeris data")
         return coordinates
         
+    except ImpactCalculationError:
+        # Re-raise our custom exceptions
+        raise
     except Exception as e:
-        raise OrbitalCalculationError(f"Earth trajectory calculation failed: {str(e)}")
+        raise ImpactCalculationError(f"Earth trajectory calculation failed: {str(e)}")
 
 
 def calculate_both_trajectories(orbital_elements: OrbitalElements, num_points: int = 365) -> Dict[str, List[List[float]]]:
     """
-    Calculate both asteroid and Earth trajectories.
+    Calculate both asteroid and Earth trajectories using synchronized time intervals.
     
     Args:
         orbital_elements: OrbitalElements object for the asteroid
@@ -358,16 +479,158 @@ def calculate_both_trajectories(orbital_elements: OrbitalElements, num_points: i
         Dictionary with 'asteroid_path' and 'earth_path' coordinate arrays
         
     Raises:
-        OrbitalCalculationError: If trajectory calculations fail
+        ImpactCalculationError: If trajectory calculations fail due to orbital synchronization issues
+        OrbitalCalculationError: If trajectory calculations fail due to other orbital mechanics issues
     """
     try:
-        asteroid_path = calculate_trajectory(orbital_elements, num_points)
-        earth_path = get_earth_trajectory(num_points)
+        # Validate input parameters
+        if not isinstance(orbital_elements, OrbitalElements):
+            raise ImpactCalculationError(f"Invalid orbital_elements type: {type(orbital_elements)}. Must be OrbitalElements")
+        
+        if not isinstance(num_points, int) or num_points <= 0:
+            raise ImpactCalculationError(f"Invalid num_points: {num_points}. Must be a positive integer")
+        
+        # Extract epoch_time from orbital_elements.epoch and validate with enhanced error handling
+        try:
+            # Validate epoch value before creating Time object
+            if not isinstance(orbital_elements.epoch, (int, float)):
+                raise ImpactCalculationError(
+                    f"Invalid epoch type: {type(orbital_elements.epoch)}. Must be a numeric Julian date"
+                )
+            
+            if not math.isfinite(orbital_elements.epoch):
+                raise ImpactCalculationError(
+                    f"Invalid epoch value: {orbital_elements.epoch}. Must be a finite Julian date"
+                )
+            
+            # Validate epoch is within reasonable range (1900-2100 AD approximately)
+            if orbital_elements.epoch < 2415020.5 or orbital_elements.epoch > 2488070.5:
+                raise ImpactCalculationError(
+                    f"Epoch {orbital_elements.epoch} is outside reasonable range (1900-2100 AD). "
+                    f"Expected Julian date between 2415020.5 and 2488070.5"
+                )
+            
+            # Create Time object with enhanced error handling
+            epoch_time = Time(orbital_elements.epoch, format='jd')
+            
+            # Validate the created Time object
+            if not math.isfinite(epoch_time.jd):
+                raise ImpactCalculationError(f"Created Time object is not finite: {epoch_time}")
+            
+            logger.info(f"Successfully validated epoch time: {epoch_time} (JD {orbital_elements.epoch})")
+            
+        except ImpactCalculationError:
+            # Re-raise our specific epoch validation errors
+            raise
+        except Exception as e:
+            raise ImpactCalculationError(
+                f"Failed to create valid epoch time from {orbital_elements.epoch}: {str(e)}. "
+                f"Ensure epoch is a valid Julian date number"
+            )
+        
+        # Create time range over 2 years from asteroid's epoch with enhanced validation
+        try:
+            time_span = 2 * u.year
+            end_time = epoch_time + time_span
+            
+            # Validate end_time
+            if not math.isfinite(end_time.jd):
+                raise ImpactCalculationError(f"Calculated end_time is not finite: {end_time}")
+            
+            logger.info(f"Creating time range from {epoch_time} to {end_time} ({time_span})")
+            
+        except Exception as e:
+            raise ImpactCalculationError(f"Failed to calculate time range parameters: {str(e)}")
+        
+        # Create shared time array that both trajectories will use with enhanced error handling
+        try:
+            shared_times = create_time_range(epoch_time, end_time, num_points)
+            
+            # Additional validation of shared_times array
+            if not shared_times:
+                raise ImpactCalculationError("Generated empty shared time array")
+            
+            if len(shared_times) != num_points:
+                raise ImpactCalculationError(
+                    f"Shared time array length mismatch: generated {len(shared_times)}, expected {num_points}"
+                )
+            
+            # Validate time array integrity
+            for i, time in enumerate(shared_times):
+                if not isinstance(time, Time) or not math.isfinite(time.jd):
+                    raise ImpactCalculationError(f"Invalid time object at index {i}: {time}")
+            
+            logger.info(f"Created shared time array with {len(shared_times)} points from epoch {epoch_time} over 2 years")
+            
+        except ImpactCalculationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            raise ImpactCalculationError(f"Failed to generate shared time array: {str(e)}")
+        
+        # Calculate asteroid trajectory using shared times array with enhanced error handling
+        try:
+            logger.info("Calculating asteroid trajectory with synchronized time array")
+            asteroid_path = calculate_trajectory(orbital_elements, num_points, shared_times)
+            
+            if not asteroid_path:
+                raise ImpactCalculationError("Asteroid trajectory calculation returned empty result")
+            
+            logger.info(f"Successfully calculated asteroid trajectory with {len(asteroid_path)} points")
+            
+        except ImpactCalculationError:
+            # Re-raise our custom exceptions
+            raise
+        except OrbitalCalculationError as e:
+            # Convert orbital calculation errors to impact calculation errors for synchronization context
+            raise ImpactCalculationError(f"Asteroid trajectory calculation failed during synchronization: {str(e)}")
+        except Exception as e:
+            raise ImpactCalculationError(f"Unexpected error calculating asteroid trajectory: {str(e)}")
+        
+        # Calculate Earth trajectory using shared times array with enhanced error handling
+        try:
+            logger.info("Calculating Earth trajectory with synchronized time array")
+            earth_path = get_earth_trajectory(shared_times)
+            
+            if not earth_path:
+                raise ImpactCalculationError("Earth trajectory calculation returned empty result")
+            
+            logger.info(f"Successfully calculated Earth trajectory with {len(earth_path)} points")
+            
+        except ImpactCalculationError:
+            # Re-raise our custom exceptions
+            raise
+        except Exception as e:
+            raise ImpactCalculationError(f"Unexpected error calculating Earth trajectory: {str(e)}")
+        
+        # Verify both trajectories have same number of points with enhanced validation
+        if len(asteroid_path) != len(earth_path):
+            error_msg = (
+                f"Trajectory synchronization failed: length mismatch between asteroid ({len(asteroid_path)} points) "
+                f"and Earth ({len(earth_path)} points) trajectories"
+            )
+            logger.error(error_msg)
+            raise ImpactCalculationError(error_msg)
+        
+        if len(asteroid_path) != num_points:
+            error_msg = (
+                f"Trajectory point count mismatch: calculated {len(asteroid_path)} points, expected {num_points}"
+            )
+            logger.error(error_msg)
+            raise ImpactCalculationError(error_msg)
+        
+        logger.info(f"Successfully calculated synchronized trajectories: asteroid={len(asteroid_path)} points, earth={len(earth_path)} points")
         
         return {
             "asteroid_path": asteroid_path,
             "earth_path": earth_path
         }
         
+    except ImpactCalculationError:
+        # Re-raise our custom exceptions with context
+        raise
+    except OrbitalCalculationError:
+        # Re-raise orbital calculation exceptions
+        raise
     except Exception as e:
-        raise OrbitalCalculationError(f"Failed to calculate trajectories: {str(e)}")
+        raise ImpactCalculationError(f"Unexpected error calculating synchronized trajectories: {str(e)}")

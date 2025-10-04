@@ -14,6 +14,13 @@ function App() {
   const [error, setError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
   const [isRetrying, setIsRetrying] = useState(false)
+  
+  // Dynamic asteroid data state management
+  const [asteroidData, setAsteroidData] = useState(null)
+  const [asteroidDataError, setAsteroidDataError] = useState(null)
+  
+  // Impact location state management with default India coordinates
+  const [impactCoords, setImpactCoords] = useState([20.5937, 78.9629])
 
   // Enhanced error handling with user-friendly messages
   const getErrorMessage = useCallback((error) => {
@@ -62,6 +69,47 @@ function App() {
       }
     }
     
+    // Handle asteroid data extraction errors with user-friendly messages
+    if (error.message && error.message.includes('parameters not available')) {
+      return {
+        title: 'Asteroid Data Unavailable',
+        message: 'The selected asteroid does not have the required physical parameters for impact simulation.',
+        type: 'missing_data'
+      }
+    }
+    
+    if (error.message && error.message.includes('NASA JPL API does not provide')) {
+      return {
+        title: 'Limited Asteroid Data',
+        message: 'The NASA JPL API does not provide complete physical parameters for this asteroid. Impact simulation is only available for asteroids with known parameters like Apophis.',
+        type: 'api_limitation'
+      }
+    }
+    
+    if (error.message && (error.message.includes('Diameter data not available') || error.message.includes('Velocity data not available'))) {
+      return {
+        title: 'Missing Asteroid Parameters',
+        message: 'The required physical parameters (diameter or velocity) are not available for this asteroid in the NASA database.',
+        type: 'incomplete_data'
+      }
+    }
+    
+    if (error.message && error.message.includes('Invalid asteroid data structure')) {
+      return {
+        title: 'Invalid Asteroid Data',
+        message: 'The asteroid data received from NASA API has an unexpected structure and cannot be processed.',
+        type: 'invalid_data'
+      }
+    }
+    
+    if (error.message && error.message.includes('Invalid') && error.message.includes('asteroid data')) {
+      return {
+        title: 'Invalid Asteroid Data',
+        message: 'The asteroid data contains invalid values that cannot be used for simulation.',
+        type: 'invalid_data'
+      }
+    }
+    
     return {
       title: 'Unexpected Error',
       message: error.message || 'An unexpected error occurred. Please try again.',
@@ -69,40 +117,149 @@ function App() {
     }
   }, [])
 
-  // Automatic data fetching on component mount with enhanced error handling
+  // Helper functions for extracting asteroid parameters from NASA API response
+  const extractDiameter = useCallback((asteroidData) => {
+    // Check if we have the expected asteroid data structure with physical parameters
+    if (!asteroidData?.phys_par) {
+      throw new Error('Physical parameters not available for this asteroid')
+    }
+    
+    // Find diameter parameter in the physical parameters array
+    const diameterParam = asteroidData.phys_par.find(param => 
+      param.name && param.name.toLowerCase().includes('diameter')
+    )
+    
+    if (!diameterParam?.value) {
+      throw new Error('Diameter data not found in asteroid parameters')
+    }
+    
+    // Parse and validate diameter value
+    const diameter = parseFloat(diameterParam.value)
+    if (isNaN(diameter) || diameter <= 0) {
+      throw new Error('Invalid diameter value in asteroid data')
+    }
+    
+    console.log(`Extracted diameter: ${diameter} km`)
+    return diameter
+  }, [])
+
+  const extractVelocity = useCallback((asteroidData) => {
+    // Check if we have the expected asteroid data structure with orbital data
+    if (!asteroidData?.orbit?.close_approach_data) {
+      throw new Error('Close approach data not available for this asteroid')
+    }
+    
+    // Get the first (most recent/relevant) close approach data
+    const approachData = asteroidData.orbit.close_approach_data[0]
+    if (!approachData?.v_rel) {
+      throw new Error('Velocity data not found in close approach data')
+    }
+    
+    // Parse and validate velocity value
+    const velocity = parseFloat(approachData.v_rel)
+    if (isNaN(velocity) || velocity <= 0) {
+      throw new Error('Invalid velocity value in asteroid data')
+    }
+    
+    console.log(`Extracted velocity: ${velocity} km/s`)
+    return velocity
+  }, [])
+
+  // Enhanced data fetching workflow - fetch complete asteroid data before trajectory data
   useEffect(() => {
-    const fetchTrajectoryData = async () => {
+    const fetchInitialData = async () => {
       setLoading(true)
       setError(null)
+      setAsteroidDataError(null)
       setIsRetrying(false)
       
       try {
-        // Fetch trajectory data for Apophis asteroid with retry logic
-        const data = await enhancedApi.getTrajectory('Apophis')
-        setTrajectory(data)
+        // Step 1: Fetch complete asteroid data first to ensure we have the full dataset
+        console.log('Fetching complete asteroid data for Apophis...')
+        const asteroidDataResponse = await enhancedApi.getAsteroid('Apophis')
+        
+        // Validate that we received asteroid data
+        if (!asteroidDataResponse) {
+          throw new Error('Invalid asteroid data received from NASA API')
+        }
+        
+        // Store the full asteroid dataset in state
+        setAsteroidData(asteroidDataResponse)
+        console.log('Asteroid data successfully stored')
+        
+        // Step 2: Then fetch trajectory data using the same asteroid
+        console.log('Fetching trajectory data for Apophis...')
+        const trajectoryData = await enhancedApi.getTrajectory('Apophis')
+        setTrajectory(trajectoryData)
+        
         setRetryCount(0) // Reset retry count on success
+        console.log('Initial data fetching completed successfully')
+        
       } catch (err) {
-        console.error('Error fetching trajectory data:', err)
+        console.error('Error in enhanced data fetching workflow:', err)
         const errorInfo = getErrorMessage(err)
-        setError(errorInfo)
+        
+        // Determine if this is an asteroid data specific error
+        if (err.message && err.message.includes('asteroid data')) {
+          setAsteroidDataError(errorInfo)
+        } else {
+          setError(errorInfo)
+        }
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTrajectoryData()
+    fetchInitialData()
   }, [getErrorMessage])
 
-  // Handle impact simulation with enhanced error handling
+  // Handle impact simulation with enhanced error handling and dynamic parameter extraction
   const handleSimulateImpact = async () => {
     setLoading(true)
     setError(null)
+    setAsteroidDataError(null)
 
     try {
-      // Use Apophis parameters for impact simulation
+      // Check if asteroid data is available
+      if (!asteroidData) {
+        throw new Error('Asteroid data not available for impact simulation')
+      }
+
+      // Extract real parameters from asteroid data with validation and fallback handling
+      let diameter, velocity
+      
+      try {
+        diameter = extractDiameter(asteroidData)
+      } catch (diameterError) {
+        console.warn('Failed to extract diameter:', diameterError.message)
+        // Fallback to known Apophis diameter if extraction fails
+        diameter = 0.34
+        console.log('Using fallback diameter for Apophis: 0.34 km')
+      }
+      
+      try {
+        velocity = extractVelocity(asteroidData)
+      } catch (velocityError) {
+        console.warn('Failed to extract velocity:', velocityError.message)
+        // Fallback to known Apophis velocity if extraction fails
+        velocity = 7.42
+        console.log('Using fallback velocity for Apophis: 7.42 km/s')
+      }
+
+      // Validate extracted parameters
+      if (!diameter || diameter <= 0) {
+        throw new Error('Invalid diameter parameter extracted from asteroid data')
+      }
+      
+      if (!velocity || velocity <= 0) {
+        throw new Error('Invalid velocity parameter extracted from asteroid data')
+      }
+
+      console.log(`Using impact parameters: diameter=${diameter}km, velocity=${velocity}km/s`)
+
       const impactParams = {
-        diameter_km: 0.34, // Apophis diameter in km
-        velocity_kps: 7.42  // Apophis velocity in km/s
+        diameter_km: diameter,
+        velocity_kps: velocity
       }
 
       const data = await enhancedApi.calculateImpact(impactParams)
@@ -111,13 +268,19 @@ function App() {
     } catch (err) {
       console.error('Error calculating impact:', err)
       const errorInfo = getErrorMessage(err)
-      setError(errorInfo)
+      
+      // Set asteroid-specific error if it's related to asteroid data
+      if (err.message && (err.message.includes('parameters') || err.message.includes('data'))) {
+        setAsteroidDataError(errorInfo)
+      } else {
+        setError(errorInfo)
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle retry functionality
+  // Enhanced retry functionality with improved data fetching workflow
   const handleRetry = useCallback(async () => {
     if (retryCount >= 3) {
       return // Max retries reached
@@ -126,22 +289,51 @@ function App() {
     setRetryCount(prev => prev + 1)
     setIsRetrying(true)
     setError(null)
+    setAsteroidDataError(null)
     setLoading(true)
 
     try {
-      // Retry the trajectory fetch
-      const data = await enhancedApi.getTrajectory('Apophis')
-      setTrajectory(data)
+      // Step 1: Retry fetching complete asteroid data first
+      console.log(`Retry attempt ${retryCount + 1}: Fetching asteroid data...`)
+      const asteroidDataResponse = await enhancedApi.getAsteroid('Apophis')
+      
+      // Validate asteroid data before storing
+      if (!asteroidDataResponse) {
+        throw new Error('Invalid asteroid data received during retry')
+      }
+      
+      setAsteroidData(asteroidDataResponse)
+      console.log('Asteroid data retry successful')
+      
+      // Step 2: Then retry trajectory data
+      console.log('Retrying trajectory data fetch...')
+      const trajectoryData = await enhancedApi.getTrajectory('Apophis')
+      setTrajectory(trajectoryData)
+      
       setRetryCount(0) // Reset on success
+      console.log('Retry completed successfully')
+      
     } catch (err) {
-      console.error('Retry failed:', err)
+      console.error(`Retry attempt ${retryCount + 1} failed:`, err)
       const errorInfo = getErrorMessage(err)
-      setError(errorInfo)
+      
+      // Determine if this is an asteroid data specific error
+      if (err.message && err.message.includes('asteroid data')) {
+        setAsteroidDataError(errorInfo)
+      } else {
+        setError(errorInfo)
+      }
     } finally {
       setLoading(false)
       setIsRetrying(false)
     }
   }, [retryCount, getErrorMessage])
+
+  // Handle impact location selection callback
+  const handleImpactSelect = useCallback((coordinates) => {
+    setImpactCoords(coordinates)
+    console.log('Impact location updated:', coordinates)
+  }, [])
 
   // Handle view switching
   const handleViewChange = (newView) => {
@@ -228,6 +420,53 @@ function App() {
           </div>
         )}
 
+        {asteroidDataError && (
+          <div className="error-message asteroid-data-error">
+            <div className="error-content">
+              <h3>{asteroidDataError.title}</h3>
+              <p>{asteroidDataError.message}</p>
+              
+              {asteroidDataError.type === 'missing_data' && (
+                <div className="error-suggestions">
+                  <p>This asteroid may not have complete physical parameter data in the NASA database.</p>
+                </div>
+              )}
+              
+              {asteroidDataError.type === 'api_limitation' && (
+                <div className="error-suggestions">
+                  <h4>Available Options:</h4>
+                  <ul>
+                    <li>Use Apophis (99942) which has known parameters</li>
+                    <li>Check NASA's Close Approach Database for additional data</li>
+                    <li>Try a different asteroid with documented physical properties</li>
+                  </ul>
+                </div>
+              )}
+              
+              {asteroidDataError.type === 'incomplete_data' && (
+                <div className="error-suggestions">
+                  <p>The NASA JPL API response is missing required fields. Try refreshing or selecting a different asteroid.</p>
+                </div>
+              )}
+              
+              {asteroidDataError.type === 'invalid_data' && (
+                <div className="error-suggestions">
+                  <p>The asteroid data structure is unexpected. This may be a temporary API issue - try again later.</p>
+                </div>
+              )}
+              
+              <div className="error-actions">
+                <button 
+                  onClick={() => setAsteroidDataError(null)}
+                  className="dismiss-button"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!loading && !error && (
           <>
             {view === '3D' && (
@@ -250,6 +489,7 @@ function App() {
                   <Scene3D 
                     trajectory={trajectory}
                     onSimulateImpact={handleSimulateImpact}
+                    onImpactSelect={handleImpactSelect}
                   />
                 </ErrorBoundary>
               </div>
@@ -272,6 +512,7 @@ function App() {
                 >
                   <ImpactMap 
                     impactData={impactData}
+                    impactCoordinates={impactCoords}
                     onBackTo3D={() => handleViewChange('3D')}
                   />
                 </ErrorBoundary>

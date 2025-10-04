@@ -7,11 +7,13 @@ import App from '../App'
 vi.mock('../utils/apiClient', () => ({
   enhancedApi: {
     getTrajectory: vi.fn(),
+    getAsteroid: vi.fn(),
     calculateImpact: vi.fn(),
     getCircuitBreakerState: vi.fn(() => ({ state: 'CLOSED', failureCount: 0 }))
   },
   api: {
     getTrajectory: vi.fn(),
+    getAsteroid: vi.fn(),
     calculateImpact: vi.fn()
   },
   APIError: class APIError extends Error {
@@ -26,6 +28,7 @@ vi.mock('../utils/apiClient', () => ({
 
 const mockEnhancedApi = {
   getTrajectory: vi.fn(),
+  getAsteroid: vi.fn(),
   calculateImpact: vi.fn(),
   getCircuitBreakerState: vi.fn(() => ({ state: 'CLOSED', failureCount: 0 }))
 }
@@ -140,6 +143,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         }
       }
 
+      // Realistic Apophis asteroid data
+      const realisticApophisAsteroid = {
+        phys_par: [
+          { name: 'diameter', value: '0.34', unit: 'km' },
+          { name: 'mass', value: '6.1e10', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '7.42', date: '2029-04-13' },
+            { v_rel: '6.14', date: '2036-04-13' }
+          ]
+        }
+      }
+
       // Realistic Apophis impact data
       const realisticApophisImpact = {
         craterDiameterMeters: 3400,      // ~3.4 km crater diameter
@@ -149,6 +166,7 @@ describe('Real NASA API Data Simulation Tests', () => {
         impactEnergyMegatons: 2870       // ~2870 megatons TNT equivalent
       }
 
+      mockEnhancedApi.getAsteroid.mockResolvedValue(realisticApophisAsteroid)
       mockEnhancedApi.getTrajectory.mockResolvedValue(realisticApophisTrajectory)
       mockEnhancedApi.calculateImpact.mockResolvedValue(realisticApophisImpact)
 
@@ -243,6 +261,20 @@ describe('Real NASA API Data Simulation Tests', () => {
       ]
 
       for (const testCase of neoTestCases) {
+        // Mock asteroid data for each test case - match expected parameters
+        const mockAsteroidData = {
+          phys_par: [
+            { name: 'diameter', value: testCase.params.diameter_km.toString(), unit: 'km' },
+            { name: 'mass', value: '1e11', unit: 'kg' }
+          ],
+          orbit: {
+            close_approach_data: [
+              { v_rel: testCase.params.velocity_kps.toString(), date: '2030-01-01' }
+            ]
+          }
+        }
+        
+        mockEnhancedApi.getAsteroid.mockResolvedValue(mockAsteroidData)
         mockEnhancedApi.getTrajectory.mockResolvedValue(testCase.trajectory)
         mockEnhancedApi.calculateImpact.mockResolvedValue(testCase.impact)
 
@@ -306,6 +338,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         impactEnergyMegatons: 0.002
       }
 
+      // Mock asteroid data for edge case
+      const edgeCaseAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '0.1', unit: 'km' },
+          { name: 'mass', value: '1e9', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '15.0', date: '2025-01-01' }
+          ]
+        }
+      }
+      
+      mockEnhancedApi.getAsteroid.mockResolvedValue(edgeCaseAsteroidData)
       mockEnhancedApi.getTrajectory.mockResolvedValue(edgeCaseData)
       mockEnhancedApi.calculateImpact.mockResolvedValue(edgeImpactData)
 
@@ -354,6 +400,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         airburstAltitude: 8000          // 8km altitude
       }
 
+      // Mock asteroid data for Tunguska-like event
+      const tunguskaAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '0.06', unit: 'km' },  // 60m diameter
+          { name: 'mass', value: '1.9e8', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '27.0', date: '1908-06-30' }  // High velocity
+          ]
+        }
+      }
+      
+      mockEnhancedApi.getAsteroid.mockResolvedValue(tunguskaAsteroidData)
       mockEnhancedApi.getTrajectory.mockResolvedValue(tunguskaTrajectory)
       mockEnhancedApi.calculateImpact.mockResolvedValue(tunguskaImpact)
 
@@ -401,6 +461,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         craterDiameterKm: 150
       }
 
+      // Mock asteroid data for Chicxulub-scale event
+      const chicxulubAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '10.0', unit: 'km' },  // 10km diameter
+          { name: 'mass', value: '1.3e15', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '20.0', date: '66000000-01-01' }  // 66 million years ago
+          ]
+        }
+      }
+      
+      mockEnhancedApi.getAsteroid.mockResolvedValue(chicxulubAsteroidData)
       mockEnhancedApi.getTrajectory.mockResolvedValue(chicxulubTrajectory)
       mockEnhancedApi.calculateImpact.mockResolvedValue(chicxulubImpact)
 
@@ -484,6 +558,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         impactEnergyMegatons: 2870
       }
 
+      // Mock asteroid data for realistic API response
+      const realisticAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '0.34', unit: 'km' },
+          { name: 'mass', value: '6.1e10', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '7.42', date: '2029-04-13' }
+          ]
+        }
+      }
+      
+      mockEnhancedApi.getAsteroid.mockResolvedValue(realisticAsteroidData)
       mockEnhancedApi.getTrajectory.mockResolvedValue(processedTrajectory)
       mockEnhancedApi.calculateImpact.mockResolvedValue(realisticImpact)
 
@@ -507,7 +595,24 @@ describe('Real NASA API Data Simulation Tests', () => {
     })
 
     it('handles NASA API rate limiting and errors', async () => {
-      // Simulate rate limiting
+      // Mock asteroid data for rate limiting test
+      const rateLimitAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '0.34', unit: 'km' },
+          { name: 'mass', value: '6.1e10', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '7.42', date: '2029-04-13' }
+          ]
+        }
+      }
+      
+      // Simulate rate limiting for both asteroid and trajectory calls
+      mockEnhancedApi.getAsteroid
+        .mockRejectedValueOnce({ response: { status: 429, data: { error: 'Rate limit exceeded' } } })
+        .mockResolvedValueOnce(rateLimitAsteroidData)
+        
       mockEnhancedApi.getTrajectory
         .mockRejectedValueOnce({ response: { status: 429, data: { error: 'Rate limit exceeded' } } })
         .mockResolvedValueOnce({
@@ -543,6 +648,20 @@ describe('Real NASA API Data Simulation Tests', () => {
         }
       }
 
+      // Mock asteroid data for validation test
+      const validatedAsteroidData = {
+        phys_par: [
+          { name: 'diameter', value: '0.34', unit: 'km' },
+          { name: 'mass', value: '6.1e10', unit: 'kg' }
+        ],
+        orbit: {
+          close_approach_data: [
+            { v_rel: '7.42', date: '2029-04-13' }
+          ]
+        }
+      }
+      
+      mockEnhancedApi.getAsteroid.mockResolvedValue(validatedAsteroidData)
       mockEnhancedApi.getTrajectory.mockResolvedValue(validatedTrajectory)
 
       render(<App />)
