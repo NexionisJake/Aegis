@@ -111,3 +111,4 @@ wheels/
 !.vscode/settings.json
 *.sublime-project
 *.sublime-workspace
+.vercel
