@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
+import GlossaryPopover from './GlossaryPopover'
 import './AsteroidSidebar.css'
 
 const AsteroidSidebar = ({ 
@@ -7,7 +8,8 @@ const AsteroidSidebar = ({
   selectedAsteroid, 
   onAsteroidSelect, 
   loading = false, 
-  error = null 
+  error = null,
+  trajectoryData = null 
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
@@ -49,10 +51,10 @@ const AsteroidSidebar = ({
   }
 
   return (
-    <div className={`asteroid-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
+    <aside className={`asteroid-sidebar hud-panel ${isExpanded ? 'expanded' : 'collapsed'}`}>
       {/* Header with toggle button */}
       <div className="sidebar-header">
-        <h3>Asteroid Explorer</h3>
+        <h3>Threat Assessment Terminal</h3>
         <button 
           className="toggle-button"
           onClick={toggleExpansion}
@@ -138,11 +140,6 @@ const AsteroidSidebar = ({
                       <div className="asteroid-designation">
                         {asteroid.designation}
                       </div>
-                      {asteroid.description && (
-                        <div className="asteroid-description">
-                          {asteroid.description}
-                        </div>
-                      )}
                     </div>
                     
                     {selectedAsteroid === asteroid.name && (
@@ -156,22 +153,124 @@ const AsteroidSidebar = ({
             </div>
           )}
 
+          {/* Threat Assessment Data - Only shown when asteroid is selected */}
+          {selectedAsteroid && trajectoryData && (
+            <div className="threat-assessment-data">
+              <h4 className="section-title">Threat Assessment</h4>
+              
+              <div className="data-row">
+                <span className="data-label">Target ID</span>
+                <span className="data-value">{selectedAsteroid}</span>
+              </div>
+              
+              {trajectoryData.diameter && (
+                <div className="data-row">
+                  <span className="data-label">
+                    Diameter
+                    <GlossaryPopover term="diameter" />
+                  </span>
+                  <span className="data-value">{trajectoryData.diameter.toFixed(3)} km</span>
+                </div>
+              )}
+              
+              {trajectoryData.relative_velocity && (
+                <div className="data-row">
+                  <span className="data-label">Relative Velocity</span>
+                  <span className="data-value">{trajectoryData.relative_velocity.toFixed(2)} km/s</span>
+                </div>
+              )}
+              
+              {trajectoryData.is_potentially_hazardous !== undefined && (
+                <div className="data-row">
+                  <span className="data-label">Potentially Hazardous</span>
+                  <span className={`data-value ${trajectoryData.is_potentially_hazardous ? 'danger' : 'safe'}`}>
+                    {trajectoryData.is_potentially_hazardous ? 'YES' : 'NO'}
+                  </span>
+                </div>
+              )}
+              
+              {trajectoryData.orbital_elements && (
+                <>
+                  <h4 className="section-title">Orbital Parameters</h4>
+                  
+                  <div className="data-row">
+                    <span className="data-label">Epoch</span>
+                    <span className="data-value">{trajectoryData.orbital_elements.epoch || 'N/A'}</span>
+                  </div>
+                  
+                  <div className="data-row">
+                    <span className="data-label">
+                      Eccentricity
+                      <GlossaryPopover term="eccentricity" />
+                    </span>
+                    <span className="data-value">{trajectoryData.orbital_elements.e?.toFixed(6) || 'N/A'}</span>
+                  </div>
+                  
+                  <div className="data-row">
+                    <span className="data-label">Inclination</span>
+                    <span className="data-value">{trajectoryData.orbital_elements.i?.toFixed(3) || 'N/A'}°</span>
+                  </div>
+                  
+                  <div className="data-row">
+                    <span className="data-label">
+                      Semi-Major Axis
+                      <GlossaryPopover term="semi-major axis" />
+                    </span>
+                    <span className="data-value">{trajectoryData.orbital_elements.a?.toFixed(6) || 'N/A'} AU</span>
+                  </div>
+                  
+                  <div className="data-row">
+                    <span className="data-label">Arg. of Periapsis</span>
+                    <span className="data-value">{trajectoryData.orbital_elements.w?.toFixed(3) || 'N/A'}°</span>
+                  </div>
+                </>
+              )}
+              
+              {(trajectoryData.first_obs || trajectoryData.last_obs || trajectoryData.n_obs_used !== undefined) && (
+                <>
+                  <h4 className="section-title">Observation Data</h4>
+                  
+                  {trajectoryData.first_obs && (
+                    <div className="data-row">
+                      <span className="data-label">First Observation</span>
+                      <span className="data-value">{trajectoryData.first_obs}</span>
+                    </div>
+                  )}
+                  
+                  {trajectoryData.last_obs && (
+                    <div className="data-row">
+                      <span className="data-label">Last Observation</span>
+                      <span className="data-value">{trajectoryData.last_obs}</span>
+                    </div>
+                  )}
+                  
+                  {trajectoryData.n_obs_used !== undefined && (
+                    <div className="data-row">
+                      <span className="data-label">Observations Used</span>
+                      <span className="data-value">{trajectoryData.n_obs_used}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           {/* Footer Info */}
           {!loading && !error && asteroidList.length > 0 && (
             <div className="sidebar-footer">
               <div className="asteroid-count">
-                {asteroidList.length} asteroids available
+                {asteroidList.length} targets in database
               </div>
               {selectedAsteroid && (
                 <div className="current-selection">
-                  Current: <strong>{selectedAsteroid}</strong>
+                  Active: <strong>{selectedAsteroid}</strong>
                 </div>
               )}
             </div>
           )}
         </>
       )}
-    </div>
+    </aside>
   )
 }
 
@@ -186,7 +285,8 @@ AsteroidSidebar.propTypes = {
   selectedAsteroid: PropTypes.string,
   onAsteroidSelect: PropTypes.func.isRequired,
   loading: PropTypes.bool,
-  error: PropTypes.string
+  error: PropTypes.string,
+  trajectoryData: PropTypes.object
 }
 
 export default AsteroidSidebar

@@ -100,8 +100,16 @@ const withRetry = async (fn, config = DEFAULT_RETRY_CONFIG) => {
   throw lastError
 }
 
+// Get API base URL from environment variables with fallback
+const getApiBaseUrl = () => {
+  // Use environment variable if available, otherwise fallback to localhost
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  // Ensure /api suffix is added
+  return baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`
+}
+
 // Create axios instance with enhanced configuration
-const createApiClient = (baseURL = 'http://localhost:8000/api', options = {}) => {
+const createApiClient = (baseURL = getApiBaseUrl(), options = {}) => {
   const client = axios.create({
     baseURL,
     timeout: 30000, // 30 seconds
@@ -224,6 +232,15 @@ export const api = {
     }, retryConfig)
   },
 
+  // Calculate deflection trajectory
+  async calculateDeflection(deflectionParams, retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.post('/deflection/calculate', deflectionParams)
+      return response.data
+    }, retryConfig)
+  },
+
   // Health check
   async healthCheck() {
     if (!apiClient) throw new NetworkError('API client not available')
@@ -326,6 +343,10 @@ export const enhancedApi = {
     return nasaApiCircuitBreaker.execute(() => 
       api.getTop10Nearest(retryConfig)
     )
+  },
+
+  async calculateDeflection(deflectionParams, retryConfig = DEFAULT_RETRY_CONFIG) {
+    return api.calculateDeflection(deflectionParams, retryConfig)
   },
 
   getCircuitBreakerState() {

@@ -66,10 +66,24 @@ class ImpactCalculationRequest(BaseModel):
     asteroid_density_kg_m3: float = Field(3000.0, gt=0, le=20000, description="Asteroid density in kg/m³")
     target_density_kg_m3: float = Field(2500.0, gt=0, le=20000, description="Target material density in kg/m³")
 
+# Get allowed origins from environment variable
+def get_allowed_origins():
+    """Get CORS allowed origins from environment variable or use defaults."""
+    allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+    
+    if allowed_origins_env:
+        # Split by comma and strip whitespace
+        origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+        if origins:
+            return origins
+    
+    # Default to localhost for development
+    return ["http://localhost:5173", "http://localhost:3000"]
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React dev server
+    allow_origins=get_allowed_origins(),  # Use environment-based origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -320,7 +334,7 @@ async def get_trajectory(asteroid_name: str):
         asteroid_name: Name or designation of the asteroid (e.g., "Apophis", "99942")
         
     Returns:
-        Dictionary containing asteroid_path and earth_path coordinate arrays
+        Dictionary containing asteroid_path, earth_path, and orbital metadata
         
     Raises:
         HTTPException: 404 if asteroid not found, 500 for calculation errors
@@ -337,7 +351,46 @@ async def get_trajectory(asteroid_name: str):
         # Step 3: Calculate trajectories
         trajectories = calculate_both_trajectories(orbital_elements, num_points=365)
         
-        logger.info(f"Successfully calculated trajectories for {asteroid_name}")
+        # Step 4: Add orbital elements and metadata to response
+        trajectories["orbital_elements"] = {
+            "a": orbital_elements.semi_major_axis,
+            "e": orbital_elements.eccentricity,
+            "i": orbital_elements.inclination,
+            "raan": orbital_elements.longitude_ascending_node,
+            "w": orbital_elements.argument_periapsis,
+            "M": orbital_elements.mean_anomaly,
+            "epoch": orbital_elements.epoch
+        }
+        
+        # Add physical parameters if available
+        try:
+            physical_params = get_asteroid_physical_parameters(nasa_data)
+            if physical_params and isinstance(physical_params, dict):
+                if "diameter_km" in physical_params:
+                    trajectories["diameter"] = physical_params["diameter_km"]
+                if "relative_velocity_kps" in physical_params:
+                    trajectories["relative_velocity"] = physical_params["relative_velocity_kps"]
+        except Exception as e:
+            logger.warning(f"Could not extract physical parameters: {e}")
+            
+        # Add potentially hazardous status if available
+        try:
+            if "object" in nasa_data and "pha" in nasa_data["object"]:
+                trajectories["is_potentially_hazardous"] = nasa_data["object"]["pha"] == "Y"
+        except Exception as e:
+            logger.warning(f"Could not extract PHA status: {e}")
+            
+        # Add observation data if available
+        try:
+            if "orbit" in nasa_data and "data_arc" in nasa_data["orbit"]:
+                data_arc = nasa_data["orbit"]["data_arc"]
+                trajectories["first_obs"] = data_arc.get("first_obs", "N/A") if isinstance(data_arc, dict) else "N/A"
+                trajectories["last_obs"] = data_arc.get("last_obs", "N/A") if isinstance(data_arc, dict) else "N/A"
+                trajectories["n_obs_used"] = data_arc.get("n_obs_used", "N/A") if isinstance(data_arc, dict) else "N/A"
+        except Exception as e:
+            logger.warning(f"Could not extract observation data: {e}")
+        
+        logger.info(f"Successfully calculated trajectory for {asteroid_name}")
         return trajectories
         
     except NASAAPIError as e:
@@ -467,6 +520,55 @@ async def calculate_asteroid_impact(asteroid_name: str):
     except Exception as e:
         logger.error(f"Unexpected error in asteroid impact calculation for {asteroid_name}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+
+class DeflectionRequest(BaseModel):
+    """Request model for deflection calculation endpoint."""
+    asteroid_name: str = Field(..., min_length=1, description="Name or designation of the asteroid")
+    delta_v_mps: float = Field(..., gt=0, description="Velocity change in meters per second")
+    days_from_epoch: float = Field(..., gt=0, description="Time of deflection in days from the asteroid's epoch")
+
+
+@app.post("/api/deflection/calculate")
+@handle_api_errors
+async def calculate_deflection(request: DeflectionRequest):
+    """
+    Calculate the deflected trajectory of an asteroid after a deflection maneuver.
+    
+    Args:
+        request: DeflectionRequest containing asteroid name, delta-v, and time of deflection
+        
+    Returns:
+        Deflected trajectory data including new orbital path
+        
+    Raises:
+        HTTPException: If calculation fails or asteroid data is unavailable
+    """
+    try:
+        logger.info(f"Deflection calculation for {request.asteroid_name}")
+        
+        # Import the deflection calculation function
+        from orbital_calculator import calculate_deflected_trajectory
+        
+        # Calculate the deflected trajectory
+        deflected_trajectory = calculate_deflected_trajectory(
+            asteroid_name=request.asteroid_name,
+            delta_v_mps=request.delta_v_mps,
+            days_from_epoch=request.days_from_epoch
+        )
+        
+        logger.info(f"Deflection calculation successful for {request.asteroid_name}")
+        return deflected_trajectory
+        
+    except OrbitalCalculationError as e:
+        error_message = str(e)
+        logger.error(f"Deflection calculation error for {request.asteroid_name}: {error_message}")
+        raise HTTPException(status_code=422, detail=f"Deflection calculation failed: {error_message}")
+        
+    except Exception as e:
+        logger.error(f"Deflection calculation failed for {request.asteroid_name}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Deflection calculation failed")
 
 
 if __name__ == "__main__":

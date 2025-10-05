@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aegis-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - NASA_API_KEY=${NASA_API_KEY:-DEMO_KEY}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=False
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - aegis-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+        - VITE_APP_ENV=production
+    container_name: aegis-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - aegis-network
+
+networks:
+  aegis-network:
+    driver: bridge
+
+# To run:
+# 1. Create a .env file in the root directory with your environment variables
+# 2. Run: docker-compose up -d
+# 3. Access the application at http://localhost
+# 4. To stop: docker-compose down

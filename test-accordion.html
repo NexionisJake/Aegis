@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accordion Test</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+        
+        body {
+            background: #0a1a22;
+            color: #e6e6e6;
+            font-family: 'Orbitron', sans-serif;
+            padding: 20px;
+        }
+        
+        details {
+            border-bottom: 1px solid rgba(0, 230, 255, 0.15);
+            margin-bottom: 10px;
+        }
+        
+        summary {
+            cursor: pointer;
+            padding: 12px 15px;
+            background-color: rgba(10, 40, 60, 0.6);
+            border-top: 1px solid rgba(0, 230, 255, 0.3);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            outline: none;
+            transition: background-color 0.2s ease-in-out;
+            color: #00e6ff;
+            font-weight: 500;
+            list-style: none;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        summary::after {
+            content: '▼';
+            font-size: 0.8em;
+            transition: transform 0.2s ease;
+            color: #00e6ff;
+            margin-left: 10px;
+        }
+        
+        details[open] > summary::after {
+            transform: rotate(180deg);
+        }
+        
+        summary:hover {
+            background-color: rgba(20, 60, 90, 0.8);
+        }
+        
+        .section-content {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 9px 15px;
+            border-bottom: 1px solid rgba(0, 100, 120, 0.15);
+        }
+        
+        .data-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .data-value {
+            color: #00e6ff;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <h1>Accordion Test</h1>
+    <p>Click on the sections below to expand/collapse them:</p>
+    
+    <div class="threat-assessment-data">
+        <details class="assessment-section" open>
+            <summary>⚠ Threat Vector</summary>
+            <div class="section-content">
+                <div class="data-row">
+                    <span class="data-label">Target ID</span>
+                    <span class="data-value">Apophis</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Diameter</span>
+                    <span class="data-value">0.370 km</span>
+                </div>
+            </div>
+        </details>
+        
+        <details class="assessment-section">
+            <summary>🛰 Orbital Mechanics</summary>
+            <div class="section-content">
+                <div class="data-row">
+                    <span class="data-label">Eccentricity</span>
+                    <span class="data-value">0.191428</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Inclination</span>
+                    <span class="data-value">3.331°</span>
+                </div>
+            </div>
+        </details>
+        
+        <details class="assessment-section">
+            <summary>📡 Discovery & Observation</summary>
+            <div class="section-content">
+                <div class="data-row">
+                    <span class="data-label">First Observation</span>
+                    <span class="data-value">2004-03-15</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Last Observation</span>
+                    <span class="data-value">2024-09-30</span>
+                </div>
+            </div>
+        </details>
+    </div>
+    
+    <script>
+        console.log('Accordion test page loaded');
+        
+        // Add click listeners to verify they're working
+        document.querySelectorAll('summary').forEach(summary => {
+            summary.addEventListener('click', (e) => {
+                console.log('Summary clicked:', e.target.textContent);
+            });
+        });
+    </script>
+</body>
+</html>
