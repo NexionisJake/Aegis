@@ -71,14 +71,21 @@ def get_allowed_origins():
     """Get CORS allowed origins from environment variable or use defaults."""
     allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
     
+    # Always include Vercel domain
+    default_origins = [
+        "https://aegis-neo.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000"
+    ]
+    
     if allowed_origins_env:
         # Split by comma and strip whitespace
         origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
-        if origins:
-            return origins
+        # Combine with defaults and remove duplicates
+        all_origins = list(set(default_origins + origins))
+        return all_origins
     
-    # Default to localhost for development
-    return ["http://localhost:5173", "http://localhost:3000"]
+    return default_origins
 
 # Configure CORS
 app.add_middleware(
