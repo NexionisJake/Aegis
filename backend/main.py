@@ -250,7 +250,12 @@ async def get_top_10_nearest():
             if successful_calculations >= 10:
                 break
                 
-            asteroid_name = asteroid_info["name"]
+            asteroid_name_raw = asteroid_info["name"]
+            # Sanitize the name: remove parentheses
+            asteroid_name = asteroid_name_raw.replace("(", "").replace(")", "").strip()
+
+            if not asteroid_name:
+                continue
             
             try:
                 # Fetch detailed asteroid data
