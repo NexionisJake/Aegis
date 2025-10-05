@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ValidationError
 from dotenv import load_dotenv
 import os
 import logging
+import traceback # Add traceback for detailed error logging
 from nasa_client import get_asteroid_data, get_neo_browse_data, get_close_approach_data, NASAAPIError
 from orbital_calculator import (
     extract_orbital_elements,
@@ -333,11 +334,12 @@ async def get_asteroid(asteroid_name: str):
 
 @app.get("/api/trajectory/{asteroid_name}")
 @handle_api_errors
-async def get_trajectory(asteroid_name: str):
+async def get_trajectory(request: Request, asteroid_name: str):
     """
     Calculate and return orbital trajectory for an asteroid and Earth.
     
     Args:
+        request: The incoming request object.
         asteroid_name: Name or designation of the asteroid (e.g., "Apophis", "99942")
         
     Returns:
@@ -348,7 +350,8 @@ async def get_trajectory(asteroid_name: str):
     """
     try:
         logger.info(f"Trajectory calculation request for asteroid: {asteroid_name}")
-        
+        logger.info(f"Incoming request headers: {dict(request.headers)}")
+
         # Step 1: Fetch asteroid data from NASA API
         nasa_data = get_asteroid_data(asteroid_name)
         
@@ -399,29 +402,30 @@ async def get_trajectory(asteroid_name: str):
         
         logger.info(f"Successfully calculated trajectory for {asteroid_name}")
         return trajectories
-        
+
     except NASAAPIError as e:
-        error_message = str(e)
-        logger.error(f"NASA API error for trajectory {asteroid_name}: {error_message}")
+        logger.error(f"NASA API Error for {asteroid_name}: {e.detail}")
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
         
-        # Return appropriate HTTP status codes based on error type
-        if "not found" in error_message.lower():
-            raise HTTPException(status_code=404, detail=error_message)
-        elif "rate limit" in error_message.lower():
-            raise HTTPException(status_code=429, detail=error_message)
-        elif "timeout" in error_message.lower():
-            raise HTTPException(status_code=504, detail=error_message)
-        else:
-            raise HTTPException(status_code=500, detail=f"Failed to fetch asteroid data: {error_message}")
-    
     except OrbitalCalculationError as e:
-        error_message = str(e)
-        logger.error(f"Orbital calculation error for {asteroid_name}: {error_message}")
-        raise HTTPException(status_code=422, detail=f"Failed to calculate trajectory: {error_message}")
-    
+        logger.error(f"Orbital Calculation Error for {asteroid_name}: {e.detail}")
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
     except Exception as e:
-        logger.error(f"Unexpected error calculating trajectory for {asteroid_name}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        # Log the full traceback for unexpected errors
+        tb_str = traceback.format_exc()
+        logger.error(f"Unexpected error processing trajectory for {asteroid_name}: {e}\nTraceback:\n{tb_str}")
+        
+        # Also log the incoming request headers for debugging
+        logger.error(f"Request headers that caused the error: {dict(request.headers)}")
+
+        error_response = create_error_response(
+            status_code=500,
+            message="An unexpected internal error occurred.",
+            details=f"Error processing trajectory for {asteroid_name}. Please check logs for details.",
+            error_code="INTERNAL_SERVER_ERROR"
+        )
+        return JSONResponse(status_code=500, content=error_response)
 
 
 @app.post("/api/impact/calculate")
