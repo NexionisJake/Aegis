@@ -634,3 +634,128 @@ def calculate_both_trajectories(orbital_elements: OrbitalElements, num_points: i
         raise
     except Exception as e:
         raise ImpactCalculationError(f"Unexpected error calculating synchronized trajectories: {str(e)}")
+
+def calculate_deflected_trajectory(
+    asteroid_name: str,
+    delta_v_mps: float,
+    days_from_epoch: float,
+    num_points: int = 365
+) -> Dict[str, Any]:
+    """
+    Calculate the deflected trajectory of an asteroid after a velocity change maneuver.
+    
+    Args:
+        asteroid_name: Name or designation of the asteroid
+        delta_v_mps: Velocity change in meters per second
+        days_from_epoch: Days from asteroid epoch when deflection occurs
+        num_points: Number of trajectory points to calculate (default: 365)
+        
+    Returns:
+        Dictionary containing deflected trajectory data with orbital path
+        
+    Raises:
+        OrbitalCalculationError: If calculation fails
+    """
+    try:
+        logger.info(f"Calculating deflected trajectory for {asteroid_name} with delta-v={delta_v_mps} m/s at t={days_from_epoch} days")
+        
+        # Import NASA client
+        from nasa_client import get_asteroid_data
+        
+        # Fetch asteroid data
+        asteroid_data = get_asteroid_data(asteroid_name)
+        
+        # Extract orbital elements
+        orbital_elements = extract_orbital_elements(asteroid_data)
+        
+        # Create original orbit
+        epoch = Time(orbital_elements.epoch, format='jd')
+        
+        original_orbit = Orbit.from_classical(
+            Sun,
+            orbital_elements.semi_major_axis * u.au,
+            orbital_elements.eccentricity * u.one,
+            orbital_elements.inclination * u.deg,
+            orbital_elements.longitude_ascending_node * u.deg,
+            orbital_elements.argument_periapsis * u.deg,
+            orbital_elements.mean_anomaly * u.deg,
+            epoch=epoch
+        )
+        
+        # Propagate to deflection time
+        deflection_time = days_from_epoch * u.day
+        orbit_at_deflection = original_orbit.propagate(deflection_time)
+        
+        # Apply velocity change (convert m/s to km/s for poliastro)
+        # We'll apply a prograde maneuver (in direction of motion)
+        from poliastro.maneuver import Maneuver
+        from astropy.coordinates import CartesianDifferential
+        
+        # Get current velocity vector and add delta-v in the same direction
+        current_v = orbit_at_deflection.v.to(u.km / u.s)
+        v_magnitude = np.linalg.norm(current_v.value)
+        v_direction = current_v.value / v_magnitude
+        
+        # Add delta-v in velocity direction (prograde burn)
+        delta_v_kms = delta_v_mps / 1000.0  # Convert m/s to km/s
+        new_v = current_v + CartesianDifferential(
+            d_x=delta_v_kms * v_direction[0] * u.km / u.s,
+            d_y=delta_v_kms * v_direction[1] * u.km / u.s,
+            d_z=delta_v_kms * v_direction[2] * u.km / u.s
+        )
+        
+        # Create new orbit with modified velocity
+        deflected_orbit = Orbit.from_vectors(
+            Sun,
+            orbit_at_deflection.r,
+            new_v,
+            epoch=orbit_at_deflection.epoch
+        )
+        
+        # Calculate deflected trajectory points
+        times = [deflected_orbit.epoch + i * (365 * u.day / num_points) for i in range(num_points)]
+        deflected_path = []
+        
+        for t in times:
+            try:
+                propagated = deflected_orbit.propagate(t - deflected_orbit.epoch)
+                r = propagated.r.to(u.au).value
+                deflected_path.append({
+                    "x": float(r[0]),
+                    "y": float(r[1]),
+                    "z": float(r[2])
+                })
+            except Exception as e:
+                logger.warning(f"Failed to propagate deflected orbit at time {t}: {str(e)}")
+                continue
+        
+        # Get new orbital elements
+        new_elements = {
+            "a": float(deflected_orbit.a.to(u.au).value),
+            "e": float(deflected_orbit.ecc.value),
+            "i": float(deflected_orbit.inc.to(u.deg).value),
+            "raan": float(deflected_orbit.raan.to(u.deg).value),
+            "argp": float(deflected_orbit.argp.to(u.deg).value),
+            "nu": float(deflected_orbit.nu.to(u.deg).value)
+        }
+        
+        logger.info(f"Deflected trajectory calculated: {len(deflected_path)} points, new a={new_elements['a']:.6f} AU")
+        
+        return {
+            "success": True,
+            "asteroid_name": asteroid_name,
+            "delta_v_applied_mps": delta_v_mps,
+            "deflection_time_days": days_from_epoch,
+            "original_elements": {
+                "a": orbital_elements.semi_major_axis,
+                "e": orbital_elements.eccentricity,
+                "i": orbital_elements.inclination
+            },
+            "deflected_elements": new_elements,
+            "deflected_path": deflected_path,
+            "path_points": len(deflected_path)
+        }
+        
+    except Exception as e:
+        logger.error(f"Deflection calculation failed for {asteroid_name}: {str(e)}")
+        raise OrbitalCalculationError(f"Failed to calculate deflected trajectory: {str(e)}")

@@ -17,6 +17,10 @@ const GLOSSARY = {
     definition: "A unit of energy equal to one million tons of TNT. Used to describe impact energy.",
     img: "/glossary/megatons.svg"
   },
+  "diameter": {
+    label: "Diameter",
+    definition: "The width of the asteroid at its widest point, typically measured in kilometers.",
+  },
   // Add more terms as needed
 };
 

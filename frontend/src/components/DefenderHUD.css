@@ -4,15 +4,19 @@
   background: var(--hud-bg, #101c2a);
   color: var(--primary-color, #00e6ff);
   border-radius: 10px;
-  padding: 1.2rem 2rem 1.2rem 2rem;
-  margin: 1.2rem auto 1.2rem auto;
-  max-width: 420px;
+  padding: 1.5rem 2rem;
+  margin: 1.2rem auto;
+  max-width: 700px;
   box-shadow: 0 2px 16px 0 rgba(0,0,0,0.13);
+  font-family: 'Orbitron', 'Segoe UI', Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.defender-hud .hud-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  font-size: 1.1rem;
+  margin-bottom: 1rem;
 }
 
 .defender-hud .hud-section {
@@ -23,15 +27,18 @@
 }
 
 .defender-hud .hud-label {
-  font-size: 0.95rem;
-  color: #b3e6ff;
-  margin-bottom: 0.2rem;
+  font-size: 0.85rem;
+  color: #8bb8cc;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .defender-hud .hud-value {
-  font-size: 1.25rem;
-  font-weight: bold;
+  font-size: 1.35rem;
+  font-weight: 600;
   color: var(--primary-color, #00e6ff);
+  text-shadow: 0 0 8px rgba(0, 230, 255, 0.3);
 }
 
 .defender-hud .hud-separator {
@@ -39,4 +46,102 @@
   background: #1e2a38;
   height: 2.2rem;
   margin: 0 1.2rem;
+}
+
+/* Deflection Controls */
+.deflection-controls {
+  margin-top: 0.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(0, 230, 255, 0.2);
+}
+
+.deflection-controls h4 {
+  font-size: 1rem;
+  color: var(--primary-color, #00e6ff);
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.control-group {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.control-input {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.control-input label {
+  font-size: 0.8rem;
+  color: #8bb8cc;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-input input[type="number"] {
+  background: rgba(0, 20, 40, 0.6);
+  border: 1px solid rgba(0, 230, 255, 0.3);
+  border-radius: 4px;
+  color: var(--primary-color, #00e6ff);
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  font-family: 'Orbitron', monospace;
+  transition: all 0.2s ease;
+}
+
+.control-input input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary-color, #00e6ff);
+  box-shadow: 0 0 12px rgba(0, 230, 255, 0.3);
+}
+
+.control-input input[type="number"]:hover {
+  border-color: rgba(0, 230, 255, 0.5);
+}
+
+.calculate-deflection-btn {
+  background: linear-gradient(135deg, #00a6cc 0%, #0086b3 100%);
+  border: 1px solid var(--primary-color, #00e6ff);
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.7rem 2rem;
+  font-size: 0.95rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  margin-top: 0.5rem;
+  width: 100%;
+  max-width: 300px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.calculate-deflection-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00c8ff 0%, #00a6cc 100%);
+  box-shadow: 0 0 20px rgba(0, 230, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.calculate-deflection-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(0, 230, 255, 0.2);
+}
+
+.calculate-deflection-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #004d66 0%, #003d52 100%);
 }

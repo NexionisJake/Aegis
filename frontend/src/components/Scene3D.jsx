@@ -15,9 +15,9 @@ const LoadingFallback = () => (
 
 const Scene3D = React.memo(({ 
   trajectory, 
+  deflectedTrajectory,
   top10Trajectories = {}, 
   selectedAsteroid = 'Apophis',
-  onSimulateImpact, 
   onImpactSelect 
 }) => {
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
@@ -125,6 +125,7 @@ const Scene3D = React.memo(({
         <Suspense fallback={<LoadingFallback />}>
           <SolarSystem 
             trajectory={trajectory}
+            deflectedTrajectory={deflectedTrajectory}
             top10Trajectories={top10Trajectories}
             selectedAsteroid={selectedAsteroid}
             qualityLevel={qualityLevel}
@@ -174,15 +175,6 @@ const Scene3D = React.memo(({
             <p>Loading trajectory data...</p>
           )}
         </div>
-        
-        {trajectory && (
-          <button 
-            className="simulate-impact-btn"
-            onClick={onSimulateImpact}
-          >
-            🌍 Simulate Impact
-          </button>
-        )}
         
         <div className="scene3d-controls">
           <p>🖱️ Drag to rotate • 🔍 Scroll to zoom • ⌨️ Right-click to pan</p>

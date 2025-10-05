@@ -17,14 +17,21 @@ pip-delete-this-directory.txt
 *.swp
 *.swo
 *~
+.vs/
+*.suo
+*.user
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment variables
 .env
@@ -32,21 +39,32 @@ logs/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
 # Build outputs
 dist/
 build/
 *.tgz
 *.tar.gz
+frontend/dist/
+frontend/build/
+backend/dist/
+backend/build/
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
+.parcel-cache/
 
 # Test coverage
 coverage/
 .nyc_output/
+htmlcov/
+.coverage
+.pytest_cache/
+*.cover
+.hypothesis/
 
 # Database
 *.db
@@ -55,3 +73,41 @@ coverage/
 
 # NASA API keys (should not be committed)
 NASA_API_KEY=*
+
+# Docker
+.dockerignore
+
+# Production artifacts
+*.pid
+*.seed
+*.pid.lock
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Python egg files
+*.egg-info/
+.eggs/
+
+# Distribution / packaging
+*.whl
+wheels/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Editor directories and files
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.sublime-project
+*.sublime-workspace

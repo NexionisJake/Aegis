@@ -39,6 +39,7 @@ const CoordinateProcessor = {
 
 const SolarSystem = React.memo(({ 
   trajectory, 
+  deflectedTrajectory,
   top10Trajectories = {}, 
   selectedAsteroid = 'Apophis',
   onImpactSelect
@@ -263,8 +264,10 @@ const SolarSystem = React.memo(({
       return { 
         earthPathGeometry: null, 
         asteroidPathGeometry: null,
+        deflectedPathGeometry: null,
         earthPositions: null,
         asteroidPositions: null,
+        deflectedPositions: null,
         pointCount: 0
       }
     }
@@ -274,10 +277,16 @@ const SolarSystem = React.memo(({
     // Process coordinates with optimized memory usage
     const earthPoints = CoordinateProcessor.processCoordinates(trajectory.earth_path, scale)
     const asteroidPoints = CoordinateProcessor.processCoordinates(trajectory.asteroid_path, scale)
+    
+    // Process deflected trajectory if available
+    const deflectedPoints = deflectedTrajectory?.asteroid_path 
+      ? CoordinateProcessor.processCoordinates(deflectedTrajectory.asteroid_path, scale)
+      : []
 
     // Create optimized BufferGeometry with proper attributes
     let earthPathGeometry = null
     let asteroidPathGeometry = null
+    let deflectedPathGeometry = null
 
     if (earthPoints.length > 0) {
       earthPathGeometry = new THREE.BufferGeometry()
@@ -308,15 +317,32 @@ const SolarSystem = React.memo(({
       asteroidPathGeometry.setAttribute('position', new THREE.BufferAttribute(asteroidPositions, 3))
       asteroidPathGeometry.computeBoundingSphere()
     }
+    
+    if (deflectedPoints.length > 0) {
+      deflectedPathGeometry = new THREE.BufferGeometry()
+      const deflectedPositions = new Float32Array(deflectedPoints.length * 3)
+      
+      for (let i = 0; i < deflectedPoints.length; i++) {
+        const point = deflectedPoints[i]
+        deflectedPositions[i * 3] = point.x
+        deflectedPositions[i * 3 + 1] = point.y
+        deflectedPositions[i * 3 + 2] = point.z
+      }
+      
+      deflectedPathGeometry.setAttribute('position', new THREE.BufferAttribute(deflectedPositions, 3))
+      deflectedPathGeometry.computeBoundingSphere()
+    }
 
     return { 
       earthPathGeometry, 
       asteroidPathGeometry,
+      deflectedPathGeometry,
       earthPositions: earthPoints,
       asteroidPositions: asteroidPoints,
-      pointCount: earthPoints.length + asteroidPoints.length
+      deflectedPositions: deflectedPoints,
+      pointCount: earthPoints.length + asteroidPoints.length + deflectedPoints.length
     }
-  }, [trajectory])
+  }, [trajectory, deflectedTrajectory])
 
   // Cleanup function for geometry disposal
   const cleanupGeometry = useCallback(() => {
@@ -326,11 +352,17 @@ const SolarSystem = React.memo(({
     if (geometryData.asteroidPathGeometry) {
       geometryData.asteroidPathGeometry.dispose()
     }
+    if (geometryData.deflectedPathGeometry) {
+      geometryData.deflectedPathGeometry.dispose()
+    }
     if (geometryData.earthPositions) {
       CoordinateProcessor.releasePoints(geometryData.earthPositions)
     }
     if (geometryData.asteroidPositions) {
       CoordinateProcessor.releasePoints(geometryData.asteroidPositions)
+    }
+    if (geometryData.deflectedPositions) {
+      CoordinateProcessor.releasePoints(geometryData.deflectedPositions)
     }
   }, [geometryData])
 
@@ -451,6 +483,20 @@ const SolarSystem = React.memo(({
             opacity={0.95}
             transparent
             linewidth={hoveredOrbit === 'asteroid' ? 4 : 3}
+          />
+        </line>
+      )}
+      
+      {/* Deflected trajectory path - shown in green when calculated */}
+      {geometryData.deflectedPathGeometry && (
+        <line
+          geometry={geometryData.deflectedPathGeometry}
+        >
+          <lineBasicMaterial 
+            color="#00FF88"
+            opacity={1.0}
+            transparent
+            linewidth={3}
           />
         </line>
       )}

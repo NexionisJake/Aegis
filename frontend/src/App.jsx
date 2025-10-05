@@ -11,6 +11,7 @@ import DefenderTechCards from './components/DefenderTechCards'
 import DefenderSuccessMeter from './components/DefenderSuccessMeter'
 import DefenderLeaderboard from './components/DefenderLeaderboard'
 import AsteroidSidebar from './components/AsteroidSidebar'
+import ActionPanel from './components/ActionPanel'
 
 function App() {
   // Theme context
@@ -77,6 +78,9 @@ function App() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [missionScore, setMissionScore] = useState(0)
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  
+  // Deflection trajectory state
+  const [deflectedTrajectory, setDeflectedTrajectory] = useState(null)
 
   // Defender Mode theme switch
   useEffect(() => {
@@ -362,6 +366,25 @@ function App() {
     setMissionScore(successProb)
     setTimeout(() => setShowLeaderboard(true), 2000)
   }
+  
+  // Handle deflection calculation
+  const handleCalculateDeflection = async (params) => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      console.log('Calculating deflection with parameters:', params)
+      const result = await enhancedApi.calculateDeflection(params)
+      console.log('Deflection calculation successful:', result)
+      setDeflectedTrajectory(result)
+    } catch (err) {
+      console.error('Deflection calculation failed:', err)
+      const errorInfo = getErrorMessage(err)
+      setError(errorInfo)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Defender Mode theme switch
   useEffect(() => {
@@ -383,9 +406,6 @@ function App() {
         <div className="header-controls">
           <ThemeToggle className="theme-control" />
           <div className="view-controls">
-            <button onClick={() => setDefenderMode((v) => !v)} style={{marginRight:8}}>
-              {defenderMode ? 'Exit Defender Mode' : 'Earth Defender Mode'}
-            </button>
             <button 
               className={view === '3D' ? 'active' : ''}
               onClick={() => handleViewChange('3D')}
@@ -407,7 +427,14 @@ function App() {
       <main className="app-main">
         {defenderMode && (
           <>
-            <DefenderHUD fuel={fuel} time={timeToImpact} probability={successProb} />
+            <DefenderHUD 
+              fuel={fuel} 
+              time={timeToImpact} 
+              probability={successProb}
+              selectedAsteroid={selectedAsteroid}
+              onCalculateDeflection={handleCalculateDeflection}
+              loading={loading}
+            />
             <DefenderTechCards onSelect={setSelectedTech} selected={selectedTech} />
             <button className="defender-sim-btn" onClick={handleDefenderSimulate} style={{margin:'18px 0'}}>Simulate Mission</button>
             {showSuccess && <DefenderSuccessMeter score={missionScore} />}
@@ -540,9 +567,9 @@ function App() {
                 >
                   <Scene3D 
                     trajectory={currentTrajectory}
+                    deflectedTrajectory={deflectedTrajectory}
                     top10Trajectories={top10Trajectories}
                     selectedAsteroid={selectedAsteroid}
-                    onSimulateImpact={handleSimulateImpact}
                     onImpactSelect={handleImpactSelect}
                   />
                 </ErrorBoundary>
@@ -583,8 +610,18 @@ function App() {
             onAsteroidSelect={handleAsteroidSelect}
             loading={sidebarLoading}
             error={error?.message}
+            trajectoryData={currentTrajectory}
           />
         )}
+
+        {/* Action Panel - Main controls for simulation and defender mode */}
+        <ActionPanel
+          onSimulateImpact={handleSimulateImpact}
+          onEnterDefenderMode={() => setDefenderMode(prev => !prev)}
+          view={view}
+          defenderMode={defenderMode}
+          loading={loading}
+        />
       </main>
     </div>
   )
