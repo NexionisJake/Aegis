@@ -10,32 +10,69 @@ import DefenderHUD from './components/DefenderHUD'
 import DefenderTechCards from './components/DefenderTechCards'
 import DefenderSuccessMeter from './components/DefenderSuccessMeter'
 import DefenderLeaderboard from './components/DefenderLeaderboard'
+import AsteroidSidebar from './components/AsteroidSidebar'
 
 function App() {
   // Theme context
-  const { currentTheme, switchTheme, currentThemeData } = useTheme()
+  const { currentTheme, switchTheme } = useTheme()
   
   // State management for trajectory data and view modes
   const [view, setView] = useState('3D')
-  const [trajectory, setTrajectory] = useState(null)
   const [impactData, setImpactData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
   const [isRetrying, setIsRetrying] = useState(false)
   
-  // Dynamic asteroid data state management
-  const [asteroidData, setAsteroidData] = useState(null)
+  // Multi-asteroid state management
+  const [selectedAsteroid, setSelectedAsteroid] = useState('Apophis')
+  const [asteroidList, setAsteroidList] = useState([])
+  const [top10Trajectories, setTop10Trajectories] = useState({})
+  const [currentTrajectory, setCurrentTrajectory] = useState(null)
+  
+  // Caching for trajectories to avoid re-fetching
+  const [trajectoryCache, setTrajectoryCache] = useState({})
+  
+  // Asteroid-specific error handling
   const [asteroidDataError, setAsteroidDataError] = useState(null)
+  const [sidebarLoading, setSidebarLoading] = useState(false)
   
   // Impact location state management with default India coordinates
   const [impactCoords, setImpactCoords] = useState([20.5937, 78.9629])
 
+  // Asteroid-specific impact locations based on orbital characteristics and threat scenarios
+  const getAsteroidImpactLocation = useCallback((asteroidName) => {
+    const locations = {
+      'Apophis': [36.2048, 138.2529],   // Japan - Pacific Ring of Fire (high seismic activity scenario)
+      'Bennu': [40.7128, -74.0060],     // New York City - major population center scenario  
+      'Didymos': [51.5074, -0.1278],    // London - European impact scenario
+      'Toutatis': [-33.8688, 151.2093], // Sydney - Southern Hemisphere scenario
+      'Eros': [55.7558, 37.6173],       // Moscow - Continental impact scenario
+      'Ryugu': [35.6762, 139.6503],     // Tokyo - Japanese mission target
+      'Itokawa': [1.3521, 103.8198],    // Singapore - Asian impact scenario
+      'Phaethon': [34.0522, -118.2437], // Los Angeles - West Coast USA scenario
+      'Vesta': [48.8566, 2.3522],       // Paris - Western Europe scenario
+      'Psyche': [19.4326, -99.1332],    // Mexico City - North American scenario
+      '99942': [36.2048, 138.2529],     // Apophis designation
+      '101955': [40.7128, -74.0060],    // Bennu designation
+      '65803': [51.5074, -0.1278],      // Didymos designation
+      '4179': [-33.8688, 151.2093],     // Toutatis designation  
+      '433': [55.7558, 37.6173],        // Eros designation
+      '162173': [35.6762, 139.6503],    // Ryugu designation
+      '25143': [1.3521, 103.8198],      // Itokawa designation
+      '3200': [34.0522, -118.2437],     // Phaethon designation
+      '4': [48.8566, 2.3522],           // Vesta designation
+      '16': [19.4326, -99.1332]         // Psyche designation
+    }
+    
+    return locations[asteroidName] || [20.5937, 78.9629] // Default to India if not found
+  }, [])
+
   // Defender Mode state
   const [defenderMode, setDefenderMode] = useState(false)
-  const [fuel, setFuel] = useState(100)
-  const [timeToImpact, setTimeToImpact] = useState('2d 4h')
-  const [successProb, setSuccessProb] = useState(70)
+  const [fuel] = useState(100)
+  const [timeToImpact] = useState('2d 4h')
+  const [successProb] = useState(70)
   const [selectedTech, setSelectedTech] = useState('Kinetic Impactor')
   const [showSuccess, setShowSuccess] = useState(false)
   const [missionScore, setMissionScore] = useState(0)
@@ -113,107 +150,144 @@ function App() {
     }
   }, [])
 
-  // Helper functions for extracting asteroid parameters from NASA API response
-  const extractDiameter = useCallback((asteroidData) => {
-    // Check if we have the expected asteroid data structure with physical parameters
-    if (!asteroidData?.phys_par) {
-      throw new Error('Physical parameters not available for this asteroid')
-    }
-    
-    // Find diameter parameter in the physical parameters array
-    const diameterParam = asteroidData.phys_par.find(param => 
-      param.name && param.name.toLowerCase().includes('diameter')
-    )
-    
-    if (!diameterParam?.value) {
-      throw new Error('Diameter data not found in asteroid parameters')
-    }
-    
-    // Parse and validate diameter value
-    const diameter = parseFloat(diameterParam.value)
-    if (isNaN(diameter) || diameter <= 0) {
-      throw new Error('Invalid diameter value in asteroid data')
-    }
-    
-    console.log(`Extracted diameter: ${diameter} km`)
-    return diameter
-  }, [])
 
-  const extractVelocity = useCallback((asteroidData) => {
-    // Check if we have the expected asteroid data structure with orbital data
-    if (!asteroidData?.orbit?.close_approach_data) {
-      throw new Error('Close approach data not available for this asteroid')
-    }
-    
-    // Get the first (most recent/relevant) close approach data
-    const approachData = asteroidData.orbit.close_approach_data[0]
-    if (!approachData?.v_rel) {
-      throw new Error('Velocity data not found in close approach data')
-    }
-    
-    // Parse and validate velocity value
-    const velocity = parseFloat(approachData.v_rel)
-    if (isNaN(velocity) || velocity <= 0) {
-      throw new Error('Invalid velocity value in asteroid data')
-    }
-    
-    console.log(`Extracted velocity: ${velocity} km/s`)
-    return velocity
-  }, [])
 
-  // Enhanced data fetching workflow - fetch complete asteroid data before trajectory data
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true)
-      setError(null)
-      setAsteroidDataError(null)
-      setIsRetrying(false)
-      
-      try {
-        // Step 1: Fetch complete asteroid data first to ensure we have the full dataset
-        console.log('Fetching complete asteroid data for Apophis...')
-        const asteroidDataResponse = await enhancedApi.getAsteroid('Apophis')
-        
-        // Validate that we received asteroid data
-        if (!asteroidDataResponse) {
-          throw new Error('Invalid asteroid data received from NASA API')
-        }
-        
-        // Store the full asteroid dataset in state
-        setAsteroidData(asteroidDataResponse)
-        console.log('Asteroid data successfully stored')
-        
-        // Step 2: Then fetch trajectory data using the same asteroid
-        console.log('Fetching trajectory data for Apophis...')
-        const trajectoryData = await enhancedApi.getTrajectory('Apophis')
-        setTrajectory(trajectoryData)
-        
-        setRetryCount(0) // Reset retry count on success
-        console.log('Initial data fetching completed successfully')
-        
-      } catch (err) {
-        console.error('Error in enhanced data fetching workflow:', err)
-        const errorInfo = getErrorMessage(err)
-        
-        // Determine if this is an asteroid data specific error
-        if (err.message && err.message.includes('asteroid data')) {
-          setAsteroidDataError(errorInfo)
-        } else {
-          setError(errorInfo)
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
+  // Asteroid selection handler
+  const handleAsteroidSelect = useCallback(async (asteroidName) => {
+    if (!asteroidName) return;
 
-    fetchInitialData()
-  }, [getErrorMessage])
-
-  // Handle impact simulation with enhanced error handling and dynamic parameter extraction
-  const handleSimulateImpact = async () => {
     setLoading(true)
     setError(null)
     setAsteroidDataError(null)
+    
+    try {
+      console.log(`Selecting asteroid: ${asteroidName}`)
+      if (selectedAsteroid !== asteroidName) {
+        setSelectedAsteroid(asteroidName);
+      }
+
+      // Check trajectory cache first
+      let trajectoryData = trajectoryCache[asteroidName]
+
+      // Fetch trajectory data if not cached
+      if (!trajectoryData) {
+        console.log(`Fetching trajectory data for ${asteroidName}...`)
+        trajectoryData = await enhancedApi.getTrajectory(asteroidName)
+        setTrajectoryCache(prev => ({ ...prev, [asteroidName]: trajectoryData }))
+      }
+
+      // Update current trajectory state and impact location
+      setCurrentTrajectory(trajectoryData)
+      
+      // Set asteroid-specific impact coordinates for future impact simulations
+      const asteroidLocation = getAsteroidImpactLocation(asteroidName)
+      setImpactCoords(asteroidLocation)
+      
+      console.log(`Successfully loaded trajectory data for ${asteroidName}`, {
+        location: asteroidLocation
+      })
+      
+    } catch (err) {
+      console.error(`Error loading asteroid ${asteroidName}:`, err)
+      const errorInfo = getErrorMessage(err)
+      setError(errorInfo)
+    } finally {
+      setLoading(false)
+    }
+  }, [trajectoryCache, getErrorMessage, selectedAsteroid, getAsteroidImpactLocation])
+
+  // Initial data fetching for static lists (asteroid list, top 10)
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setSidebarLoading(true)
+      setError(null)
+      
+      // Clear any existing asteroid list first
+      setAsteroidList([])
+      
+      try {
+        console.log('===== STARTING API FETCH =====')
+        console.log('Fetching initial list data...')
+        const top10Response = await enhancedApi.getTop10Nearest();
+        
+        console.log('===== API RESPONSE RECEIVED =====')
+        console.log('API Response received:', top10Response);
+        console.log('Response type:', typeof top10Response);
+        console.log('Response keys:', Object.keys(top10Response));
+        console.log('Number of asteroids:', Object.keys(top10Response).length);
+        
+        // Extract asteroid names from top10 response to create asteroid list
+        const asteroidNames = Object.keys(top10Response);
+        
+        if (asteroidNames.length === 0) {
+          console.error('WARNING: API returned empty object!');
+          throw new Error('API returned no asteroids');
+        }
+        
+        const asteroidListFromTop10 = asteroidNames.map(name => ({
+          name: name,
+          designation: name, // Use name as designation since we have real NASA data
+          description: `Real NASA asteroid data from JPL database`
+        }));
+        
+        console.log('===== CREATED ASTEROID LIST =====');
+        console.log('Created asteroid list:', asteroidListFromTop10);
+        console.log('About to call setAsteroidList...');
+        
+        setAsteroidList(asteroidListFromTop10)
+        setTop10Trajectories(top10Response)
+        
+        console.log('===== SUCCESS =====');
+        console.log(`Initial list data loaded successfully with ${asteroidNames.length} real NASA asteroids: ${asteroidNames.join(', ')}`);
+      } catch (err) {
+        console.error('Error fetching initial list data:', err)
+        console.error('Error type:', err.name)
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+        const errorInfo = getErrorMessage(err)
+        setError(errorInfo)
+        
+        // Fallback to static list if top10 also fails
+        console.log('===== API CALL FAILED =====');
+        console.log('API for top 10 failed. Using expanded hardcoded fallback list with 10 asteroids.');
+        const fallbackList = [
+          { name: "Apophis", designation: "99942", description: "Famous for its 2029 close approach to Earth." },
+          { name: "Bennu", designation: "101955", description: "Target of NASA's OSIRIS-REx sample return mission." },
+          { name: "Didymos", designation: "65803", description: "Binary asteroid system, target of NASA's DART mission." },
+          { name: "Toutatis", designation: "4179", description: "Large irregularly shaped near-Earth asteroid." },
+          { name: "Eros", designation: "433", description: "First asteroid orbited and landed on by spacecraft." },
+          { name: "Ryugu", designation: "162173", description: "Target of Japan's Hayabusa2 sample return mission." },
+          { name: "Itokawa", designation: "25143", description: "First asteroid visited by Japan's Hayabusa mission." },
+          { name: "Phaethon", designation: "3200", description: "Parent body of the Geminid meteor shower." },
+          { name: "Vesta", designation: "4", description: "Second-largest asteroid, visited by NASA's Dawn mission." },
+          { name: "Psyche", designation: "16", description: "Metal-rich asteroid, target of NASA's Psyche mission." }
+        ];
+        setAsteroidList(fallbackList)
+        console.log('Using fallback asteroid list with 10 real NASA asteroids due to API error');
+      } finally {
+        setSidebarLoading(false)
+      }
+    }
+    fetchInitialData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Fetch data for the selected asteroid whenever it changes
+  useEffect(() => {
+    const loadSelectedAsteroidData = async () => {
+      if (selectedAsteroid) {
+        await handleAsteroidSelect(selectedAsteroid);
+      }
+    };
+
+    loadSelectedAsteroidData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAsteroid]); // This hook now ONLY depends on the selected asteroid name
+
+  // Handle impact simulation using real NASA asteroid parameters
+  const handleSimulateImpact = async () => {
+    setLoading(true)
+    setError(null)
 
     // Switch to Impact (Crisis) mode when simulating impact
     if (currentTheme !== 'impact') {
@@ -221,46 +295,27 @@ function App() {
     }
 
     try {
-      // Check if asteroid data is available
-      if (!asteroidData) {
-        throw new Error('Asteroid data not available for impact simulation')
+      if (!selectedAsteroid) {
+        throw new Error('No asteroid selected for impact simulation')
       }
 
-      // Extract real parameters from asteroid data with validation and fallback handling
-      let diameter, velocity
-      try {
-        diameter = extractDiameter(asteroidData)
-      } catch (diameterError) {
-        console.warn('Failed to extract diameter:', diameterError.message)
-        // Fallback to known Apophis diameter if extraction fails
-        diameter = 0.34
-        console.log('Using fallback diameter for Apophis: 0.34 km')
-      }
-      try {
-        velocity = extractVelocity(asteroidData)
-      } catch (velocityError) {
-        console.warn('Failed to extract velocity:', velocityError.message)
-        // Fallback to known Apophis velocity if extraction fails
-        velocity = 7.42
-        console.log('Using fallback velocity for Apophis: 7.42 km/s')
-      }
+      console.log(`Calculating impact for ${selectedAsteroid} using real NASA parameters...`)
 
-      // Validate extracted parameters
-      if (!diameter || diameter <= 0) {
-        throw new Error('Invalid diameter parameter extracted from asteroid data')
-      }
-      if (!velocity || velocity <= 0) {
-        throw new Error('Invalid velocity parameter extracted from asteroid data')
-      }
-
-      console.log(`Using impact parameters: diameter=${diameter}km, velocity=${velocity}km/s`)
-
-      const impactParams = {
-        diameter_km: diameter,
-        velocity_kps: velocity
-      }
-
-      const data = await enhancedApi.calculateImpact(impactParams)
+      // Use new asteroid-specific impact calculation with real NASA data
+      const data = await enhancedApi.calculateAsteroidImpact(selectedAsteroid)
+      
+      // Set asteroid-specific impact location
+      const asteroidLocation = getAsteroidImpactLocation(selectedAsteroid)
+      setImpactCoords(asteroidLocation)
+      
+      console.log(`Impact calculation successful for ${selectedAsteroid}:`, {
+        diameter: data.diameter_used_km,
+        velocity: data.velocity_used_kps,
+        source: data.parameters_source,
+        crater: data.craterDiameterMeters,
+        energy: data.impactEnergyMegatons,
+        location: asteroidLocation
+      })
       setImpactData(data)
       setView('2D')
     } catch (err) {
@@ -276,6 +331,19 @@ function App() {
       setLoading(false)
     }
   }
+
+  // Handle retry functionality
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true)
+    setRetryCount(prev => prev + 1)
+    
+    try {
+      // Retry loading the selected asteroid
+      await handleAsteroidSelect(selectedAsteroid)
+    } finally {
+      setIsRetrying(false)
+    }
+  }, [handleAsteroidSelect, selectedAsteroid])
 
   // Handle impact location selection callback
   const handleImpactSelect = useCallback((coordinates) => {
@@ -457,7 +525,7 @@ function App() {
               <div className="view-container">
                 <ErrorBoundary
                   errorMessage="There was an error loading the 3D visualization."
-                  fallback={({ error, onRetry, onReload }) => (
+                  fallback={({ onRetry, onReload }) => (
                     <ThreeDErrorBoundary>
                       <div className="component-error">
                         <h3>3D Visualization Error</h3>
@@ -471,7 +539,9 @@ function App() {
                   )}
                 >
                   <Scene3D 
-                    trajectory={trajectory}
+                    trajectory={currentTrajectory}
+                    top10Trajectories={top10Trajectories}
+                    selectedAsteroid={selectedAsteroid}
                     onSimulateImpact={handleSimulateImpact}
                     onImpactSelect={handleImpactSelect}
                   />
@@ -483,7 +553,7 @@ function App() {
               <div className="view-container">
                 <ErrorBoundary
                   errorMessage="There was an error loading the impact map."
-                  fallback={({ error, onRetry, onReload }) => (
+                  fallback={({ onRetry, onReload }) => (
                     <div className="component-error">
                       <h3>Map Visualization Error</h3>
                       <p>Unable to load the impact map view.</p>
@@ -503,6 +573,17 @@ function App() {
               </div>
             )}
           </>
+        )}
+
+        {/* Asteroid Selection Sidebar */}
+        {!defenderMode && (
+          <AsteroidSidebar
+            asteroidList={asteroidList}
+            selectedAsteroid={selectedAsteroid}
+            onAsteroidSelect={handleAsteroidSelect}
+            loading={sidebarLoading}
+            error={error?.message}
+          />
         )}
       </main>
     </div>

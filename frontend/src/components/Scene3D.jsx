@@ -13,10 +13,14 @@ const LoadingFallback = () => (
   </mesh>
 )
 
-const Scene3D = React.memo(({ trajectory, onSimulateImpact, onImpactSelect }) => {
-  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(
-    process.env.NODE_ENV === 'development'
-  )
+const Scene3D = React.memo(({ 
+  trajectory, 
+  top10Trajectories = {}, 
+  selectedAsteroid = 'Apophis',
+  onSimulateImpact, 
+  onImpactSelect 
+}) => {
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
   const [qualityLevel, setQualityLevel] = useState('high') // high, medium, low
 
   // Memoized camera configuration
@@ -120,7 +124,9 @@ const Scene3D = React.memo(({ trajectory, onSimulateImpact, onImpactSelect }) =>
         {/* Solar system components with performance-aware loading */}
         <Suspense fallback={<LoadingFallback />}>
           <SolarSystem 
-            trajectory={trajectory} 
+            trajectory={trajectory}
+            top10Trajectories={top10Trajectories}
+            selectedAsteroid={selectedAsteroid}
             qualityLevel={qualityLevel}
             onPerformanceChange={handlePerformanceChange}
             onImpactSelect={onImpactSelect}

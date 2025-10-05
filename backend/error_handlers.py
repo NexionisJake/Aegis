@@ -125,25 +125,25 @@ def map_error_to_http_status(error: Exception) -> tuple[int, str]:
     Returns:
         Tuple of (status_code, user_friendly_message)
     """
-    error_str = str(error).lower()
-    
-    # NASA API specific errors
-    if "not found" in error_str:
-        return 404, "Asteroid not found in NASA database"
-    elif "rate limit" in error_str:
-        return 429, "NASA API rate limit exceeded. Please try again later."
-    elif "timeout" in error_str:
+    if isinstance(error, NonRetryableError):
+        error_str = str(error).lower()
+        if "not found" in error_str:
+            return 404, "Asteroid not found in NASA database"
+        if "invalid request" in error_str:
+            return 400, "Invalid request to NASA API"
+        if "invalid json" in error_str:
+            return 502, "Received an invalid response from NASA API"
+
+    if isinstance(error, requests.exceptions.HTTPError):
+        if error.response.status_code == 404:
+            return 404, "Asteroid not found in NASA database"
+        if error.response.status_code == 429:
+            return 429, "NASA API rate limit exceeded. Please try again later."
+
+    if isinstance(error, requests.exceptions.Timeout):
         return 504, "Request timeout while fetching data from NASA API"
-    elif "connection" in error_str:
+    if isinstance(error, requests.exceptions.ConnectionError):
         return 503, "Unable to connect to NASA API. Please try again later."
-    
-    # Orbital calculation errors
-    elif "orbital" in error_str or "calculation" in error_str:
-        return 422, "Unable to calculate orbital trajectory with provided data"
-    
-    # Impact calculation errors
-    elif "impact" in error_str:
-        return 422, "Unable to calculate impact effects with provided parameters"
     
     # Validation errors
     elif "validation" in error_str or "invalid" in error_str:

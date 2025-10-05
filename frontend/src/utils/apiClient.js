@@ -197,6 +197,33 @@ export const api = {
     }, retryConfig)
   },
 
+  // Calculate impact for specific asteroid using real NASA parameters
+  async calculateAsteroidImpact(asteroidName, retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.post(`/impact/calculate/${encodeURIComponent(asteroidName)}`)
+      return response.data
+    }, retryConfig)
+  },
+
+  // Get list of featured asteroids
+  async getAsteroidsList(retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.get('/asteroids/list')
+      return response.data
+    }, retryConfig)
+  },
+
+  // Get top 10 nearest asteroids with trajectories
+  async getTop10Nearest(retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.get('/asteroids/top-10-nearest')
+      return response.data
+    }, retryConfig)
+  },
+
   // Health check
   async healthCheck() {
     if (!apiClient) throw new NetworkError('API client not available')
@@ -283,6 +310,22 @@ export const enhancedApi = {
 
   async calculateImpact(impactParams, retryConfig = DEFAULT_RETRY_CONFIG) {
     return api.calculateImpact(impactParams, retryConfig)
+  },
+
+  async calculateAsteroidImpact(asteroidName, retryConfig = DEFAULT_RETRY_CONFIG) {
+    return api.calculateAsteroidImpact(asteroidName, retryConfig)
+  },
+
+  async getAsteroidsList(retryConfig = DEFAULT_RETRY_CONFIG) {
+    return nasaApiCircuitBreaker.execute(() => 
+      api.getAsteroidsList(retryConfig)
+    )
+  },
+
+  async getTop10Nearest(retryConfig = DEFAULT_RETRY_CONFIG) {
+    return nasaApiCircuitBreaker.execute(() => 
+      api.getTop10Nearest(retryConfig)
+    )
   },
 
   getCircuitBreakerState() {

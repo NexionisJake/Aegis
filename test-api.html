@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Testing API Connection</h1>
+    <button onclick="testAPI()">Test /api/asteroids/top-10-nearest</button>
+    <pre id="output"></pre>
+    
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.textContent = 'Fetching data...\n';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/asteroids/top-10-nearest');
+                output.textContent += `Status: ${response.status} ${response.statusText}\n`;
+                
+                const data = await response.json();
+                output.textContent += `\nResponse received!\n`;
+                output.textContent += `Number of asteroids: ${Object.keys(data).length}\n`;
+                output.textContent += `Asteroid names: ${Object.keys(data).join(', ')}\n\n`;
+                output.textContent += `Full response:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                output.textContent += `\nError: ${error.message}\n`;
+                output.textContent += `Error stack: ${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>
