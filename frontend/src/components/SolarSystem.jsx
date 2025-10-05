@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Sphere, Line, Ring, useTexture, Html } from '@react-three/drei'
+import { Sphere, Line, Html } from '@react-three/drei'
 // import { EffectComposer, Bloom, SSAO } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -32,12 +32,17 @@ const CoordinateProcessor = {
     }
     return points;
   },
-  releasePoints(points) {
+  releasePoints() {
     // Optionally implement pooling/cleanup if needed
   }
 }
 
-const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPerformanceChange }) => {
+const SolarSystem = React.memo(({ 
+  trajectory, 
+  top10Trajectories = {}, 
+  selectedAsteroid = 'Apophis',
+  onImpactSelect
+}) => {
   // Interactive orbit state
   const [hoveredOrbit, setHoveredOrbit] = useState(null)
   const [infoBox, setInfoBox] = useState(null)
@@ -124,22 +129,48 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
   const asteroidRef = useRef()
   const earthLineRef = useRef()
   const asteroidLineRef = useRef()
-  const orbitLineRef = useRef()
-  const animationStateRef = useRef({
-    earthRotation: 0,
-    asteroidAngle: 0,
-    lastUpdate: 0
-  })
-  
-  // Orbital parameters for asteroid around Earth
-  const orbitRadius = 3.5 // Distance from Earth center
-  const orbitSpeed = 0.02 // Rotation speed around Earth
-  const earthRotationSpeed = 0.01 // Earth's rotation speed
 
   // Three.js context for raycasting
   const { gl } = useThree()
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const mouse = useMemo(() => new THREE.Vector2(), [])
+
+  // Render multiple asteroid orbits with different colors and styles
+  const renderTop10Orbits = useMemo(() => {
+    if (!top10Trajectories || Object.keys(top10Trajectories).length === 0) {
+      return null
+    }
+
+    return Object.entries(top10Trajectories).map(([asteroidName, trajectoryData], index) => {
+      if (!trajectoryData?.asteroid_path) return null
+
+      // Skip the selected asteroid as it will be rendered prominently
+      if (asteroidName === selectedAsteroid) return null
+
+      // Create points from trajectory data
+      const points = CoordinateProcessor.processCoordinates(trajectoryData.asteroid_path, 0.1)
+      if (points.length < 2) return null
+
+      // Color scheme for different asteroids
+      const colors = [
+        '#4A90E2', '#81C784', '#FFB74D', '#F06292',
+        '#BA68C8', '#4DB6AC', '#FF8A65', '#A1887F',
+        '#90A4AE', '#FFF176'
+      ]
+      const color = colors[index % colors.length]
+
+      return (
+        <Line
+          key={`orbit-${asteroidName}`}
+          points={points}
+          color={color}
+          lineWidth={1}
+          transparent
+          opacity={0.4}
+        />
+      )
+    }).filter(Boolean)
+  }, [top10Trajectories, selectedAsteroid])
 
   // Convert 3D intersection point to geographic latitude/longitude coordinates
   const convertToLatLng = useCallback((point, radius = 0.12) => {
@@ -363,27 +394,9 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
   });
 
 
-  // Helper to safely load a texture, fallback to undefined if not found
-  function safeTexture(path) {
-    try {
-      return useTexture(path)
-    } catch (e) {
-      return undefined
-    }
-  }
-
-  // Try to load textures, fallback to undefined
-  let earthDayMap, earthNightMap, earthSpecMap, earthCityMap, asteroidBumpMap, asteroidAlbedo
-  try {
-    earthDayMap = safeTexture('/textures/earth_day.jpg')
-    earthNightMap = safeTexture('/textures/earth_night.jpg')
-    earthSpecMap = safeTexture('/textures/earth_spec.jpg')
-    earthCityMap = safeTexture('/textures/earth_city_lights.jpg')
-    asteroidBumpMap = safeTexture('/textures/asteroid_bump.jpg')
-    asteroidAlbedo = safeTexture('/textures/asteroid_albedo.jpg')
-  } catch (e) {
-    earthDayMap = earthNightMap = earthSpecMap = earthCityMap = asteroidBumpMap = asteroidAlbedo = undefined
-  }
+  // Simplified approach without texture loading for now
+  // Textures can be added later when texture files are available
+  const earthDayMap = null
 
   return (
     <>
@@ -505,12 +518,10 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
         onClick={handleEarthClick}
       >
         <meshStandardMaterial 
-          map={earthDayMap || null}
-          emissiveMap={earthCityMap || null}
+          map={earthDayMap || undefined}
           color={earthDayMap ? undefined : "#4A90E2"}
           emissive="#1a237e"
           emissiveIntensity={0.7}
-          specularMap={earthSpecMap || null}
           roughness={0.5}
           metalness={0.2}
         />
@@ -526,10 +537,7 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
           position={asteroidPosition}
         >
           <meshStandardMaterial 
-            map={asteroidAlbedo || null}
-            bumpMap={asteroidBumpMap || null}
-            bumpScale={asteroidBumpMap ? 0.03 : 0}
-            color={asteroidAlbedo ? undefined : "#888"}
+            color="#888"
             roughness={0.95}
             metalness={0.05}
           />
@@ -552,6 +560,9 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
         </Sphere>
       )}
 
+      {/* Multiple asteroid orbits - background visualization */}
+      {renderTop10Orbits}
+
       {/* Reference grid - conditional rendering for performance */}
       {PerformanceMonitor.getFPS() > 20 && (
         <gridHelper 
@@ -561,12 +572,7 @@ const SolarSystem = React.memo(({ trajectory, onImpactSelect, qualityLevel, onPe
       )}
       
       {/* Performance indicator for debugging */}
-      {process.env.NODE_ENV === 'development' && (
-        <mesh position={[-8, 8, 0]}>
-          <planeGeometry args={[2, 0.5]} />
-          <meshBasicMaterial color="#00ff00" transparent opacity={0.7} />
-        </mesh>
-      )}
+      {/* Development indicator - removed process.env check */}
 	</group>
     </>
   )

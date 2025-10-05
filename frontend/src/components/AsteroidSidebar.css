@@ -1,0 +1,315 @@
+/* AsteroidSidebar.css */
+.asteroid-sidebar {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid #00e6ff;
+  border-radius: 12px;
+  color: white;
+  font-family: 'Arial', sans-serif;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 230, 255, 0.3);
+  transition: all 0.3s ease;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.asteroid-sidebar.collapsed {
+  width: 180px;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 230, 255, 0.3);
+  background: rgba(0, 230, 255, 0.1);
+  border-radius: 10px 10px 0 0;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #00e6ff;
+  text-shadow: 0 0 10px rgba(0, 230, 255, 0.5);
+}
+
+.toggle-button {
+  background: rgba(0, 230, 255, 0.2);
+  border: 1px solid #00e6ff;
+  color: #00e6ff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.toggle-button:hover {
+  background: rgba(0, 230, 255, 0.4);
+  box-shadow: 0 0 10px rgba(0, 230, 255, 0.6);
+}
+
+.search-section {
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 230, 255, 0.2);
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 230, 255, 0.5);
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #00e6ff;
+  box-shadow: 0 0 8px rgba(0, 230, 255, 0.4);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.clear-search-button {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.clear-search-button:hover {
+  color: #ff6b6b;
+}
+
+.search-results-info {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.sidebar-loading {
+  padding: 32px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(0, 230, 255, 0.3);
+  border-top: 3px solid #00e6ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sidebar-error {
+  padding: 16px;
+  text-align: center;
+  color: #ff6b6b;
+}
+
+.sidebar-error h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.sidebar-error p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.asteroids-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  max-height: calc(70vh - 200px);
+}
+
+.asteroids-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.asteroids-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.asteroids-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 230, 255, 0.6);
+  border-radius: 3px;
+}
+
+.asteroids-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 230, 255, 0.8);
+}
+
+.asteroid-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 4px 0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 230, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.asteroid-item:hover {
+  background: rgba(0, 230, 255, 0.1);
+  border-color: rgba(0, 230, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+.asteroid-item.selected {
+  background: rgba(0, 230, 255, 0.2);
+  border-color: #00e6ff;
+  box-shadow: 0 4px 12px rgba(0, 230, 255, 0.3);
+}
+
+.asteroid-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.asteroid-name {
+  font-weight: bold;
+  font-size: 14px;
+  color: #00e6ff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asteroid-designation {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+}
+
+.asteroid-description {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.selected-indicator {
+  color: #00e6ff;
+  font-size: 16px;
+  font-weight: bold;
+  margin-left: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.no-results {
+  text-align: center;
+  padding: 32px 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(0, 230, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0 0 10px 10px;
+}
+
+.asteroid-count {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+}
+
+.current-selection {
+  font-size: 11px;
+  color: #00e6ff;
+}
+
+.current-selection strong {
+  font-weight: bold;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .asteroid-sidebar {
+    width: 280px;
+    bottom: 10px;
+    left: 10px;
+    max-height: 60vh;
+  }
+  
+  .asteroid-sidebar.collapsed {
+    width: 160px;
+  }
+}
+
+/* Focus styles for accessibility */
+.asteroid-item:focus {
+  outline: 2px solid #00e6ff;
+  outline-offset: 2px;
+}
+
+.search-input:focus {
+  outline: 2px solid #00e6ff;
+  outline-offset: 2px;
+}
+
+.toggle-button:focus {
+  outline: 2px solid #00e6ff;
+  outline-offset: 2px;
+}
