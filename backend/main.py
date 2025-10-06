@@ -7,22 +7,22 @@ from dotenv import load_dotenv
 import os
 import logging
 import traceback # Add traceback for detailed error logging
-from .nasa_client import get_asteroid_data, get_neo_browse_data, get_close_approach_data, NASAAPIError
+from nasa_client import get_asteroid_data, get_neo_browse_data, get_close_approach_data, NASAAPIError
 # Defer heavy scientific stack imports (numpy/scipy/astropy/poliastro) so basic endpoints work even if broken.
 HEAVY_LIBS_AVAILABLE = True
 HEAVY_IMPORT_ERROR = None
 try:
-    from .orbital_calculator import (
+    from orbital_calculator import (
         extract_orbital_elements,
         calculate_both_trajectories,
         OrbitalCalculationError
     )
-    from .impact_calculator import (
+    from impact_calculator import (
         calculate_impact_effects,
         format_impact_results,
         ImpactCalculationError
     )
-    from .asteroid_physical_data import (
+    from asteroid_physical_data import (
         get_asteroid_physical_parameters,
         get_realistic_fallback_parameters
     )
@@ -40,13 +40,13 @@ except Exception as _heavy_err:  # Broad except to allow degraded startup
         "Heavy scientific dependencies failed to import. Running in DEGRADED mode. "
         f"Endpoints requiring orbital or impact calculations will return 503. Root error: {HEAVY_IMPORT_ERROR}"
     )
-from .error_handlers import (
+from error_handlers import (
     global_exception_handler,
     handle_api_errors,
     create_error_response,
     map_error_to_http_status
 )
-from .ai_analysis import AsteroidImpactAnalyzer
+from ai_analysis import AsteroidImpactAnalyzer
 from datetime import datetime
 
 # Load environment variables explicitly from backend/.env if present (works when run from project root or other cwd)

@@ -12,7 +12,7 @@ from poliastro.bodies import Sun, Earth
 from poliastro.twobody import Orbit
 
 # Import ImpactCalculationError for orbital synchronization errors
-from .impact_calculator import ImpactCalculationError
+from impact_calculator import ImpactCalculationError
 
 logger = logging.getLogger(__name__)
 
