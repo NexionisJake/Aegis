@@ -15,7 +15,7 @@ if _env_path.exists():
 else:
     load_dotenv()
 
-from .error_handlers import (
+from error_handlers import (
     retry_on_failure,
     create_retry_session,
     nasa_api_circuit_breaker,
