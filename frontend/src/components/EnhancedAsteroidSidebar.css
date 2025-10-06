@@ -1,0 +1,412 @@
+/* Enhanced Asteroid Sidebar Styling */
+.enhanced-sidebar {
+  width: 350px;
+  height: 100vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  padding: 20px;
+  border-right: 2px solid #4a90e2;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.enhanced-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.enhanced-sidebar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.enhanced-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 226, 0.6);
+  border-radius: 4px;
+}
+
+.enhanced-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 226, 0.8);
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.sidebar-title {
+  font-size: 24px;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.title-icon {
+  font-size: 28px;
+}
+
+.asteroid-count {
+  font-size: 14px;
+  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 5px 10px;
+  border-radius: 15px;
+  display: inline-block;
+}
+
+.warning-badge {
+  background: rgba(255, 165, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+/* Controls Section */
+.controls-section {
+  margin-bottom: 25px;
+  space-y: 15px;
+}
+
+.search-controls {
+  margin-bottom: 15px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.filter-select option {
+  background: #1a1a2e;
+  color: white;
+}
+
+/* Asteroid Cards */
+.asteroids-list {
+  space-y: 15px;
+}
+
+.asteroid-card {
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 2px solid transparent;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.asteroid-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.asteroid-card:hover {
+  border-color: #4a90e2;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(74, 144, 226, 0.2);
+}
+
+.asteroid-card:hover::before {
+  opacity: 1;
+}
+
+.asteroid-card.selected {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 255, 136, 0.3);
+}
+
+.asteroid-card.high {
+  border-left: 4px solid #ff4444;
+}
+
+.asteroid-card.medium {
+  border-left: 4px solid #ffaa00;
+}
+
+.asteroid-card.low {
+  border-left: 4px solid #00ff88;
+}
+
+/* Card Header */
+.asteroid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.asteroid-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+  flex: 1;
+}
+
+.threat-indicator {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Card Details */
+.asteroid-details {
+  space-y: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.label {
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.value {
+  font-weight: 500;
+  text-align: right;
+  flex: 1;
+}
+
+.description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nasa-link {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.nasa-link a {
+  color: #4a90e2;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid #4a90e2;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.nasa-link a:hover {
+  background: #4a90e2;
+  color: white;
+}
+
+/* Loading State */
+.enhanced-sidebar.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.loading-text {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.loading-subtext {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* Error State */
+.enhanced-sidebar.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-content {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #ff6b6b;
+}
+
+.retry-button {
+  background: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.retry-button:hover {
+  background: #357abd;
+}
+
+/* No Results */
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.no-results-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.no-results-text {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.clear-filters-button {
+  background: transparent;
+  color: #4a90e2;
+  border: 2px solid #4a90e2;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.clear-filters-button:hover {
+  background: #4a90e2;
+  color: white;
+}
+
+/* Footer */
+.sidebar-footer {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.data-source {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .enhanced-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    border-right: none;
+    border-top: 2px solid #4a90e2;
+  }
+}

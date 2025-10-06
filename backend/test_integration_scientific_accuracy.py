@@ -5,13 +5,13 @@ from astropy.time import Time
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 
-from orbital_calculator import (
+from .orbital_calculator import (
     calculate_both_trajectories, 
     get_earth_trajectory,
     calculate_trajectory,
     OrbitalElements
 )
-from impact_calculator import calculate_impact_effects, ImpactCalculationError
+from .impact_calculator import calculate_impact_effects, ImpactCalculationError
 
 class TestScientificAccuracy:
     """Test suite for verifying scientific accuracy of synchronized trajectories"""

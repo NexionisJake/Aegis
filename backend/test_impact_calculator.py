@@ -3,7 +3,7 @@ Unit tests for impact calculation functionality.
 """
 import pytest
 import math
-from impact_calculator import (
+from .impact_calculator import (
     ImpactCalculationError,
     ImpactParameters,
     ImpactResults,

@@ -349,6 +349,22 @@ export const enhancedApi = {
     return api.calculateDeflection(deflectionParams, retryConfig)
   },
 
+  async getEnhancedAsteroidsList(retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.get('/asteroids/enhanced-list')
+      return response.data
+    }, retryConfig)
+  },
+
+  async analyzeImpact(analysisData, retryConfig = DEFAULT_RETRY_CONFIG) {
+    if (!apiClient) throw new NetworkError('API client not available')
+    return withRetry(async () => {
+      const response = await apiClient.post('/impact/analyze', analysisData)
+      return response.data
+    }, retryConfig)
+  },
+
   getCircuitBreakerState() {
     return nasaApiCircuitBreaker.getState()
   }

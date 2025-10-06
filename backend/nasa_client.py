@@ -5,7 +5,17 @@ import requests
 import os
 from typing import Dict, Any, Optional
 import logging
-from error_handlers import (
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables EARLY before any client initialization
+_env_path = Path(__file__).parent / '.env'
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    load_dotenv()
+
+from .error_handlers import (
     retry_on_failure,
     create_retry_session,
     nasa_api_circuit_breaker,
@@ -77,6 +87,9 @@ class NASAClient:
             # Add API key if available
             if self.api_key and self.api_key != "your_nasa_api_key_here":
                 params['api_key'] = self.api_key
+                logger.debug(f"Using NASA API key: {self.api_key[:10]}... (truncated)")
+            else:
+                logger.warning(f"No valid NASA API key found. api_key value: {self.api_key}")
             
             logger.info(f"Fetching NEO browse data: page={page}, size={size}")
             

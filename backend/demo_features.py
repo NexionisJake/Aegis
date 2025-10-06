@@ -22,7 +22,7 @@ def test_phase_1_dynamic_parameters():
     print("=" * 60)
     
     try:
-        from nasa_client import get_asteroid_data
+        from .nasa_client import get_asteroid_data
         
         print("📡 Fetching Apophis data from NASA API...")
         asteroid_data = get_asteroid_data('Apophis')
@@ -94,8 +94,8 @@ def test_phase_3_synchronized_trajectories():
     print("=" * 60)
     
     try:
-        from orbital_calculator import extract_orbital_elements, calculate_both_trajectories
-        from nasa_client import get_asteroid_data
+        from .orbital_calculator import extract_orbital_elements, calculate_both_trajectories
+        from .nasa_client import get_asteroid_data
         
         print("📡 Getting asteroid orbital data...")
         asteroid_data = get_asteroid_data('Apophis')
@@ -141,7 +141,7 @@ def test_integration_workflow():
     try:
         # Simulate the complete frontend workflow
         print("1️⃣ Fetch asteroid data...")
-        from nasa_client import get_asteroid_data
+        from .nasa_client import get_asteroid_data
         asteroid_data = get_asteroid_data('Apophis')
         
         print("2️⃣ Extract impact parameters...")
@@ -168,12 +168,12 @@ def test_integration_workflow():
         print(f"   Selected coordinates: {impact_coords}")
         
         print("4️⃣ Calculate synchronized trajectories...")
-        from orbital_calculator import extract_orbital_elements, calculate_both_trajectories
+        from .orbital_calculator import extract_orbital_elements, calculate_both_trajectories
         orbital_elements = extract_orbital_elements(asteroid_data)
         trajectories = calculate_both_trajectories(orbital_elements, num_points=10)
         
         print("5️⃣ Simulate impact calculation...")
-        from impact_calculator import calculate_impact_effects, format_impact_results
+        from .impact_calculator import calculate_impact_effects, format_impact_results
         
         if diameter and velocity:
             impact_results = calculate_impact_effects(

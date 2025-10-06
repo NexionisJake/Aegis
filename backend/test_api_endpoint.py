@@ -9,7 +9,7 @@ backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
 from main import app
-from nasa_client import NASAAPIError
+from .nasa_client import NASAAPIError
 
 client = TestClient(app)
 

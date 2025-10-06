@@ -10,7 +10,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from error_handlers import (
+from .error_handlers import (
     RetryableError,
     NonRetryableError,
     create_retry_session,

@@ -2,34 +2,68 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
+from typing import Dict, Any
 from dotenv import load_dotenv
 import os
 import logging
 import traceback # Add traceback for detailed error logging
-from nasa_client import get_asteroid_data, get_neo_browse_data, get_close_approach_data, NASAAPIError
-from orbital_calculator import (
-    extract_orbital_elements,
-    calculate_both_trajectories,
-    OrbitalCalculationError
-)
-from impact_calculator import (
-    calculate_impact_effects,
-    format_impact_results,
-    ImpactCalculationError
-)
-from asteroid_physical_data import (
-    get_asteroid_physical_parameters,
-    get_realistic_fallback_parameters
-)
-from error_handlers import (
+from .nasa_client import get_asteroid_data, get_neo_browse_data, get_close_approach_data, NASAAPIError
+# Defer heavy scientific stack imports (numpy/scipy/astropy/poliastro) so basic endpoints work even if broken.
+HEAVY_LIBS_AVAILABLE = True
+HEAVY_IMPORT_ERROR = None
+try:
+    from .orbital_calculator import (
+        extract_orbital_elements,
+        calculate_both_trajectories,
+        OrbitalCalculationError
+    )
+    from .impact_calculator import (
+        calculate_impact_effects,
+        format_impact_results,
+        ImpactCalculationError
+    )
+    from .asteroid_physical_data import (
+        get_asteroid_physical_parameters,
+        get_realistic_fallback_parameters
+    )
+except Exception as _heavy_err:  # Broad except to allow degraded startup
+    HEAVY_LIBS_AVAILABLE = False
+    HEAVY_IMPORT_ERROR = str(_heavy_err)
+    # Provide lightweight placeholder exceptions so endpoint code still compiles
+    class ImpactCalculationError(Exception):
+        pass
+    class OrbitalCalculationError(Exception):
+        pass
+    # Log at import time for visibility
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger(__name__).warning(
+        "Heavy scientific dependencies failed to import. Running in DEGRADED mode. "
+        f"Endpoints requiring orbital or impact calculations will return 503. Root error: {HEAVY_IMPORT_ERROR}"
+    )
+from .error_handlers import (
     global_exception_handler,
     handle_api_errors,
     create_error_response,
     map_error_to_http_status
 )
+from .ai_analysis import AsteroidImpactAnalyzer
+from datetime import datetime
 
-# Load environment variables
-load_dotenv()
+# Load environment variables explicitly from backend/.env if present (works when run from project root or other cwd)
+from pathlib import Path
+_env_path = Path(__file__).parent / '.env'
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path)
+else:
+    # Fallback to default search
+    load_dotenv()
+
+# NASA API key fallback to DEMO_KEY if not provided
+if not os.getenv("NASA_API_KEY") or os.getenv("NASA_API_KEY") == "your_nasa_api_key_here":
+    os.environ["NASA_API_KEY"] = "DEMO_KEY"  # low rate limits but prevents hard failure
+    logging.getLogger(__name__).warning("NASA_API_KEY not set. Falling back to DEMO_KEY (rate-limited). Set a real key in backend/.env for production.")
+else:
+    logging.getLogger(__name__).info(f"NASA_API_KEY loaded: {os.getenv('NASA_API_KEY')[:10]}... (truncated)")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -353,6 +387,8 @@ async def get_trajectory(request: Request, asteroid_name: str):
     Raises:
         HTTPException: 404 if asteroid not found, 500 for calculation errors
     """
+    if not HEAVY_LIBS_AVAILABLE:
+        raise HTTPException(status_code=503, detail=f"Scientific libraries unavailable: {HEAVY_IMPORT_ERROR}")
     try:
         logger.info(f"Trajectory calculation request for asteroid: {asteroid_name}")
         logger.info(f"Incoming request headers: {dict(request.headers)}")
@@ -433,6 +469,113 @@ async def get_trajectory(request: Request, asteroid_name: str):
         return JSONResponse(status_code=500, content=error_response)
 
 
+# Initialize AI analyzer
+analyzer = AsteroidImpactAnalyzer()
+
+
+@app.get("/api/asteroids/enhanced-list")
+@handle_api_errors
+async def get_enhanced_asteroids_list():
+    """
+    Get comprehensive asteroid list with detailed information for enhanced UI.
+    
+    Returns:
+        List of asteroids with detailed NASA data including threat levels
+    """
+    try:
+        logger.info("Fetching enhanced NEO data from NASA API")
+        logger.debug(f"Using NASA_API_KEY present: {bool(os.getenv('NASA_API_KEY'))}")
+        # Fetch more asteroids from NASA
+        neo_data = get_neo_browse_data(page=0, size=50)
+        asteroids = []
+        # Defensive: ensure structure
+        neos = neo_data.get("near_earth_objects") if isinstance(neo_data, dict) else None
+        if neos and isinstance(neos, list):
+            for neo in neos:
+                # Extract comprehensive data
+                name = neo.get("name", "Unknown")
+                diameter_data = neo.get("estimated_diameter", {})
+                
+                # Get diameter range
+                diameter_km = None
+                if diameter_data.get("kilometers"):
+                    km_data = diameter_data["kilometers"]
+                    diameter_km = (km_data.get("estimated_diameter_min", 0) + 
+                                 km_data.get("estimated_diameter_max", 0)) / 2
+                
+                # Get orbital data
+                orbital_data = neo.get("orbital_data", {})
+                
+                # Create enhanced asteroid entry
+                asteroid_info = {
+                    "name": name,
+                    "designation": neo.get("designation", ""),
+                    "nasa_jpl_url": neo.get("nasa_jpl_url", ""),
+                    "is_potentially_hazardous": neo.get("is_potentially_hazardous_asteroid", False),
+                    "diameter_km": diameter_km,
+                    "absolute_magnitude": neo.get("absolute_magnitude_h"),
+                    "orbital_period": orbital_data.get("orbital_period"),
+                    "minimum_orbit_intersection": orbital_data.get("minimum_orbit_intersection"),
+                    "description": f"{'⚠️ Potentially Hazardous' if neo.get('is_potentially_hazardous_asteroid') else '✅ Non-hazardous'} - Diameter: {diameter_km:.3f} km" if diameter_km else "Real NASA asteroid data",
+                    "threat_level": "HIGH" if neo.get("is_potentially_hazardous_asteroid") else "LOW"
+                }
+                
+                asteroids.append(asteroid_info)
+        
+        # Sort by threat level and size
+        asteroids.sort(key=lambda x: (x.get("is_potentially_hazardous", False), x.get("diameter_km", 0)), reverse=True)
+        
+        if not asteroids:
+            logger.warning("Enhanced list produced 0 asteroids from NASA response structure. Returning fallback list.")
+            asteroids = [
+                {"name": "Apophis", "designation": "99942", "description": "⚠️ Potentially Hazardous - Famous for 2029 close approach", "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=99942", "is_potentially_hazardous": True, "threat_level": "HIGH", "diameter_km": 0.34, "absolute_magnitude": 19.7},
+                {"name": "Bennu", "designation": "101955", "description": "⚠️ Potentially Hazardous - OSIRIS-REx sample return target", "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=101955", "is_potentially_hazardous": True, "threat_level": "HIGH", "diameter_km": 0.492, "absolute_magnitude": 20.9},
+                {"name": "Ryugu", "designation": "162173", "description": "✅ Non-hazardous - Hayabusa2 sample return target", "nasa_jpl_url": "", "is_potentially_hazardous": False, "threat_level": "LOW", "diameter_km": 0.9, "absolute_magnitude": 19.2}
+            ]
+        logger.info(f"Successfully processed {len(asteroids)} enhanced asteroids (returning up to 30)")
+        return {"asteroids": asteroids[:30]}  # Return top 30
+        
+    except Exception as e:
+        logger.error(f"Error fetching enhanced NEO data: {str(e)}")
+        # Return fallback data instead of 500 error
+        logger.warning("NASA API failed. Returning fallback asteroid data.")
+        fallback_asteroids = [
+            {"name": "Apophis", "designation": "99942", "description": "⚠️ Potentially Hazardous - Famous for 2029 close approach", "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=99942", "is_potentially_hazardous": True, "threat_level": "HIGH", "diameter_km": 0.34, "absolute_magnitude": 19.7},
+            {"name": "Bennu", "designation": "101955", "description": "⚠️ Potentially Hazardous - OSIRIS-REx sample return target", "nasa_jpl_url": "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=101955", "is_potentially_hazardous": True, "threat_level": "HIGH", "diameter_km": 0.492, "absolute_magnitude": 20.9},
+            {"name": "Ryugu", "designation": "162173", "description": "✅ Non-hazardous - Hayabusa2 sample return target", "nasa_jpl_url": "", "is_potentially_hazardous": False, "threat_level": "LOW", "diameter_km": 0.9, "absolute_magnitude": 19.2}
+        ]
+        return {"asteroids": fallback_asteroids}
+
+
+@app.post("/api/impact/analyze")
+@handle_api_errors
+async def analyze_impact_with_ai(request: Dict[str, Any]):
+    """
+    Generate AI-powered impact analysis using Gemini 1.5 Flash.
+    
+    Args:
+        request: Dictionary containing asteroid_data, impact_results, and location
+        
+    Returns:
+        AI analysis of the asteroid impact scenario
+    """
+    try:
+        asteroid_data = request.get('asteroid_data', {})
+        impact_results = request.get('impact_results', {})
+        location = request.get('location', 'Unknown location')
+        
+        analysis = analyzer.analyze_impact(asteroid_data, impact_results, location)
+        
+        return {
+            "analysis": analysis,
+            "generated_at": datetime.utcnow().isoformat(),
+            "model": "gemini-1.5-flash"
+        }
+    except Exception as e:
+        logger.error(f"AI analysis error: {e}")
+        raise HTTPException(status_code=500, detail="AI analysis failed")
+
+
 @app.post("/api/impact/calculate")
 @handle_api_errors
 async def calculate_impact(request: ImpactCalculationRequest):
@@ -448,6 +591,8 @@ async def calculate_impact(request: ImpactCalculationRequest):
     Raises:
         HTTPException: 422 for invalid parameters, 500 for calculation errors
     """
+    if not HEAVY_LIBS_AVAILABLE:
+        raise HTTPException(status_code=503, detail=f"Scientific libraries unavailable: {HEAVY_IMPORT_ERROR}")
     try:
         logger.info(f"Impact calculation request: diameter={request.diameter_km}km, velocity={request.velocity_kps}km/s")
         
@@ -490,6 +635,8 @@ async def calculate_asteroid_impact(asteroid_name: str):
     Raises:
         HTTPException: 404 if asteroid not found, 422 for calculation errors, 500 for server errors
     """
+    if not HEAVY_LIBS_AVAILABLE:
+        raise HTTPException(status_code=503, detail=f"Scientific libraries unavailable: {HEAVY_IMPORT_ERROR}")
     try:
         logger.info(f"Asteroid-specific impact calculation request for: {asteroid_name}")
         
@@ -561,6 +708,8 @@ async def calculate_deflection(request: DeflectionRequest):
     Raises:
         HTTPException: If calculation fails or asteroid data is unavailable
     """
+    if not HEAVY_LIBS_AVAILABLE:
+        raise HTTPException(status_code=503, detail=f"Scientific libraries unavailable: {HEAVY_IMPORT_ERROR}")
     try:
         logger.info(f"Deflection calculation for {request.asteroid_name}")
         

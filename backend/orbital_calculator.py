@@ -12,7 +12,7 @@ from poliastro.bodies import Sun, Earth
 from poliastro.twobody import Orbit
 
 # Import ImpactCalculationError for orbital synchronization errors
-from impact_calculator import ImpactCalculationError
+from .impact_calculator import ImpactCalculationError
 
 logger = logging.getLogger(__name__)
 
@@ -660,7 +660,7 @@ def calculate_deflected_trajectory(
         logger.info(f"Calculating deflected trajectory for {asteroid_name} with delta-v={delta_v_mps} m/s at t={days_from_epoch} days")
         
         # Import NASA client
-        from nasa_client import get_asteroid_data
+        from .nasa_client import get_asteroid_data
         
         # Fetch asteroid data
         asteroid_data = get_asteroid_data(asteroid_name)

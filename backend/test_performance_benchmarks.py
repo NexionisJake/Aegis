@@ -7,12 +7,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from astropy.time import Time
 
-from orbital_calculator import (
+from .orbital_calculator import (
     calculate_both_trajectories,
     get_earth_trajectory,
     calculate_trajectory
 )
-from impact_calculator import calculate_impact_effects
+from .impact_calculator import calculate_impact_effects
 
 class TestPerformanceBenchmarks:
     """Performance benchmarks for enhanced simulation features"""

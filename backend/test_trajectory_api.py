@@ -12,8 +12,8 @@ backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
 from main import app
-from nasa_client import NASAAPIError
-from orbital_calculator import OrbitalCalculationError, OrbitalElements
+from .nasa_client import NASAAPIError
+from .orbital_calculator import OrbitalCalculationError, OrbitalElements
 
 client = TestClient(app)
 

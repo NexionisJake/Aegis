@@ -10,7 +10,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from orbital_calculator import (
+from .orbital_calculator import (
     extract_orbital_elements,
     validate_orbital_elements,
     calculate_trajectory,
@@ -20,7 +20,7 @@ from orbital_calculator import (
     OrbitalElements,
     OrbitalCalculationError
 )
-from impact_calculator import ImpactCalculationError
+from .impact_calculator import ImpactCalculationError
 from astropy.time import Time
 from astropy import units as u
 

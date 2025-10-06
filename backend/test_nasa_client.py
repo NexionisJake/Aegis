@@ -9,7 +9,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from nasa_client import NASAClient, NASAAPIError, get_asteroid_data
+from .nasa_client import NASAClient, NASAAPIError, get_asteroid_data
 
 
 class TestNASAClient:

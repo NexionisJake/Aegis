@@ -7,8 +7,8 @@ Comprehensive validation of enhanced simulation features
 import time
 import traceback
 from datetime import datetime
-from orbital_calculator import OrbitalElements, calculate_both_trajectories, get_earth_trajectory
-from impact_calculator import calculate_impact_effects
+from .orbital_calculator import OrbitalElements, calculate_both_trajectories, get_earth_trajectory
+from .impact_calculator import calculate_impact_effects
 from astropy.time import Time
 from datetime import timedelta
 import numpy as np
