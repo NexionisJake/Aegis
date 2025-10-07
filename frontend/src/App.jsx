@@ -29,6 +29,14 @@ function App() {
     setError(null)
   }
 
+  const handleDeselectAsteroid = () => {
+    console.log('Asteroid deselected')
+    setSelectedAsteroid(null)
+    setImpactData(null)
+    setError(null)
+    setShowMap(false)
+  }
+
   const handleLocationSelect = (coordinates) => {
     console.log('Location selected:', coordinates)
     setSelectedLocation(coordinates)
@@ -185,6 +193,15 @@ function App() {
           {/* Selection Info Overlay */}
           {selectedAsteroid && (
             <div className="selection-info">
+              <button 
+                className="close-selection-btn"
+                onClick={handleDeselectAsteroid}
+                title="Close selection"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
               <div className="selected-asteroid">
                 <h3>Selected Asteroid</h3>
                 <div className="asteroid-name">{selectedAsteroid.name}</div>
@@ -214,10 +231,15 @@ function App() {
                   {loading ? (
                     <>
                       <span className="spinner"></span>
-                      Calculating...
+                      <span>Calculating...</span>
                     </>
                   ) : (
-                    <>💥 Simulate Impact</>
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                      </svg>
+                      <span>Simulate Impact</span>
+                    </>
                   )}
                 </button>
               </div>
@@ -316,25 +338,12 @@ function App() {
             </ErrorBoundary>
           </div>
         )}
-      </main>
 
-      <footer className="app-footer">
-        <div className="footer-content">
-          <div className="data-sources">
-            <span>Data sources: </span>
-            <a href="https://ssd-api.jpl.nasa.gov/" target="_blank" rel="noopener noreferrer">
-              NASA JPL Small-Body Database
-            </a>
-            {' • '}
-            <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer">
-              Google Gemini AI
-            </a>
-          </div>
-          <div className="disclaimer">
-            Educational simulation only. Actual impact effects may vary significantly.
-          </div>
+        {/* Minimal Disclaimer - Bottom Right */}
+        <div className="page-disclaimer">
+          Educational simulation only. Actual impact effects may vary significantly.
         </div>
-      </footer>
+      </main>
     </div>
   )
 }

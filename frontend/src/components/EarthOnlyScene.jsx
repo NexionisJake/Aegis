@@ -147,18 +147,25 @@ const Earth = ({ onLocationSelect, autoRotate, zoomToLocation, onZoomComplete })
       const normalizedPoint = localPoint.clone().normalize()
       
       // Convert 3D point to lat/lng using standard spherical coordinates
-      // Three.js SphereGeometry with standard UV mapping:
+      // Three.js sphere geometry and NASA Blue Marble texture alignment:
       // - Y axis points to North Pole (latitude)
-      // - UV mapping starts at -Z axis for longitude 0°
-      // - Longitude increases counter-clockwise when viewed from above (North Pole)
+      // - NASA Blue Marble texture: 0° longitude (Greenwich) is at +X axis
+      // - Texture wraps counter-clockwise when viewed from North Pole
       
       // Calculate latitude (range: -90° to +90°)
       const latitude = Math.asin(normalizedPoint.y) * (180 / Math.PI)
       
       // Calculate longitude (range: -180° to +180°)
-      // Standard spherical coordinates: atan2(x, z) with proper signs
-      // This aligns with equirectangular texture mapping
-      const longitude = Math.atan2(normalizedPoint.x, normalizedPoint.z) * (180 / Math.PI)
+      // For NASA Blue Marble texture from three.js examples:
+      // - Prime meridian (0°) aligns with +X axis
+      // - Use atan2(z, x) for counter-clockwise wrapping
+      // - Subtract 90° to rotate coordinate system so +X = 0°
+      let longitude = Math.atan2(-normalizedPoint.z, normalizedPoint.x) * (180 / Math.PI)
+      
+      // Adjust to standard -180° to +180° range with 0° at Greenwich
+      longitude = longitude - 90
+      if (longitude < -180) longitude += 360
+      if (longitude > 180) longitude -= 360
       
       // Debug logging for coordinate verification (remove in production)
       console.log(`Click coordinates: ${latitude.toFixed(3)}°N, ${longitude.toFixed(3)}°E`)
@@ -349,8 +356,13 @@ const Earth = ({ onLocationSelect, autoRotate, zoomToLocation, onZoomComplete })
       {selectedLocation && (
         <Html position={[0, 2.8, 0]} center>
           <div className="location-indicator">
+            <svg className="location-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="12" r="6" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            </svg>
             <div className="location-text">
-              🎯 Impact Location Selected
+              Impact Location Selected
             </div>
             <div className="coordinates">
               {Math.abs(selectedLocation[0]).toFixed(2)}°{selectedLocation[0] >= 0 ? 'N' : 'S'}, {Math.abs(selectedLocation[1]).toFixed(2)}°{selectedLocation[1] >= 0 ? 'E' : 'W'}
@@ -511,14 +523,36 @@ const EarthOnlyScene = ({ onLocationSelect, zoomToLocation, onZoomComplete }) =>
           className={`control-btn ${autoRotate ? 'active' : ''}`}
           onClick={() => setAutoRotate(!autoRotate)}
         >
-          {autoRotate ? '⏸️ Stop Auto-Rotate' : '▶️ Auto-Rotate'}
+          <span className="btn-icon">
+            {autoRotate ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            )}
+          </span>
+          <span className="btn-text">{autoRotate ? 'STOP AUTO-ROTATE' : 'AUTO-ROTATE'}</span>
         </button>
         
         <button 
           className={`control-btn ${controlsEnabled ? 'active' : ''}`}
           onClick={() => setControlsEnabled(!controlsEnabled)}
         >
-          {controlsEnabled ? '🔓 Controls ON' : '🔒 Controls OFF'}
+          <span className="btn-icon">
+            {controlsEnabled ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+              </svg>
+            )}
+          </span>
+          <span className="btn-text">{controlsEnabled ? 'CONTROLS ON' : 'CONTROLS OFF'}</span>
         </button>
       </div>
 
@@ -534,93 +568,208 @@ const EarthOnlyScene = ({ onLocationSelect, zoomToLocation, onZoomComplete }) =>
           position: absolute;
           top: 20px;
           left: 20px;
-          background: rgba(0, 0, 0, 0.7);
+          background: rgba(10, 15, 35, 0.85);
           color: white;
-          padding: 15px;
+          padding: 15px 20px;
           border-radius: 10px;
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(15px);
+          border: 1px solid rgba(0, 229, 255, 0.3);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 
+                      inset 0 1px 1px rgba(255, 255, 255, 0.1);
           z-index: 100;
         }
 
         .instruction-text {
           font-size: 16px;
           margin-bottom: 5px;
+          font-weight: 500;
+          color: #00E5FF;
         }
 
         .instruction-subtext {
           font-size: 14px;
-          opacity: 0.8;
+          opacity: 0.85;
           font-style: italic;
+          color: rgba(245, 247, 250, 0.9);
         }
 
         .controls-panel {
-          position: absolute;
-          top: 20px;
+          position: fixed;
+          top: 90px;
           right: 20px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          z-index: 100;
+          gap: 12px;
+          z-index: 50;
+          max-width: 220px;
         }
 
         .control-btn {
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          padding: 10px 15px;
-          border-radius: 8px;
+          position: relative;
+          background: rgba(10, 15, 35, 0.85);
+          color: #F5F7FA;
+          border: 2px solid rgba(0, 229, 255, 0.4);
+          padding: 10px 18px;
+          border-radius: 50px;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: bold;
-          backdrop-filter: blur(10px);
+          font-size: 12px;
+          font-weight: 600;
+          font-family: 'Orbitron', sans-serif;
+          letter-spacing: 0.05em;
+          backdrop-filter: blur(15px);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 100%;
+          max-width: 220px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .control-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, 
+            transparent, 
+            rgba(0, 229, 255, 0.2), 
+            transparent);
+          transition: left 0.5s ease;
+          border-radius: 50px;
+        }
+
+        .control-btn:hover::before {
+          left: 100%;
+        }
+
+        .btn-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 18px;
+          filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.6));
           transition: all 0.3s ease;
-          min-width: 160px;
+        }
+
+        .btn-icon svg {
+          display: block;
+        }
+
+        .btn-text {
+          flex: 1;
+          text-align: left;
         }
 
         .control-btn:hover {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.4);
+          background: rgba(0, 229, 255, 0.15);
+          border-color: rgba(0, 229, 255, 0.8);
           transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 229, 255, 0.3),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn:hover .btn-icon {
+          transform: scale(1.15);
+          filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
         }
 
         .control-btn.active {
-          background: rgba(0, 255, 136, 0.8);
-          border-color: rgba(0, 255, 136, 1);
-          color: black;
+          background: linear-gradient(135deg, 
+            rgba(0, 229, 255, 0.3), 
+            rgba(255, 204, 51, 0.2));
+          border-color: #00E5FF;
+          color: #FFFFFF;
+          box-shadow: 0 0 20px rgba(0, 229, 255, 0.5),
+                      0 0 40px rgba(0, 229, 255, 0.2),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.3);
         }
 
         .control-btn.active:hover {
-          background: rgba(0, 255, 136, 0.9);
+          background: linear-gradient(135deg, 
+            rgba(0, 229, 255, 0.4), 
+            rgba(255, 204, 51, 0.3));
+          box-shadow: 0 0 25px rgba(0, 229, 255, 0.6),
+                      0 0 50px rgba(0, 229, 255, 0.3),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .control-btn.active .btn-icon {
+          filter: drop-shadow(0 0 10px rgba(255, 204, 51, 0.9));
         }
 
         .location-indicator {
-          background: rgba(0, 255, 136, 0.9);
-          color: white;
-          padding: 10px 15px;
-          border-radius: 20px;
+          background: linear-gradient(135deg, rgba(10, 15, 35, 0.95), rgba(10, 15, 35, 0.9));
+          backdrop-filter: blur(15px);
+          color: #F5F7FA;
+          padding: 16px 24px;
+          border-radius: 16px;
           text-align: center;
-          font-weight: bold;
-          box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          backdrop-filter: blur(10px);
-          animation: pulse 2s infinite;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                      0 0 20px rgba(0, 229, 255, 0.3),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+          border: 2px solid rgba(0, 229, 255, 0.4);
+          animation: locationPulse 3s ease-in-out infinite;
+          min-width: 280px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .location-icon {
+          color: #00E5FF;
+          filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8));
+          animation: targetSpin 4s linear infinite;
         }
 
         .location-text {
-          font-size: 14px;
-          margin-bottom: 5px;
+          font-size: 15px;
+          font-weight: 600;
+          font-family: 'Orbitron', sans-serif;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          background: linear-gradient(135deg, #00E5FF, #FFCC33);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .coordinates {
-          font-size: 12px;
-          opacity: 0.9;
-          font-family: monospace;
+          font-size: 13px;
+          color: rgba(245, 247, 250, 0.85);
+          font-family: 'Space Mono', monospace;
+          font-weight: 500;
+          letter-spacing: 1px;
+          padding: 4px 12px;
+          background: rgba(0, 229, 255, 0.1);
+          border-radius: 8px;
+          border: 1px solid rgba(0, 229, 255, 0.2);
         }
 
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
+        @keyframes locationPulse {
+          0%, 100% { 
+            transform: scale(1); 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        0 0 20px rgba(0, 229, 255, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+          }
+          50% { 
+            transform: scale(1.03); 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        0 0 30px rgba(0, 229, 255, 0.5),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+          }
+        }
+
+        @keyframes targetSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

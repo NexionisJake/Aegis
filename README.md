@@ -1,13 +1,133 @@
-# Project Aegis
+# 🛡️ AEGIS - Asteroid Impact Simulator
 
-A web application for visualizing near-Earth asteroid orbital paths and simulating impact scenarios.
+**Advanced Earth Guard and Impact Simulation System**
 
+A cutting-edge web application for visualizing near-Earth asteroids and simulating impact scenarios with AI-powered analysis.
+
+[![Live Demo](https://img.shields.io/badge/Live-Demo-00E5FF?style=for-the-badge&logo=vercel)](https://aegis-neo.vercel.app/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![NASA API](https://img.shields.io/badge/NASA-API-red.svg)](https://api.nasa.gov/)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Gemini%201.5-4285F4?logo=google)](https://ai.google.dev/)
+
+## 🌐 Live Application
+
+**🚀 [Launch AEGIS](https://aegis-neo.vercel.app/)**
+
+Experience real-time asteroid impact simulation with:
+- 📡 Live NASA asteroid data
+- 🌍 Interactive 3D Earth visualization
+- 💥 Scientific impact calculations
+- 🤖 AI-powered impact analysis
+- 🗺️ Detailed impact zone mapping
+
+## ✨ Key Features
+
+### 🎯 Real-Time Asteroid Database
+- **20+ NASA-verified asteroids** with live orbital data
+- Real-time threat level classification (High/Medium/Low)
+- Comprehensive physical parameters (diameter, mass, velocity, orbit period)
+- Direct links to NASA JPL Small-Body Database
+
+### 🌍 Interactive 3D Earth Visualization
+- Photorealistic Earth with NASA Blue Marble textures
+- Day/night lighting with city illumination
+- Atmospheric glow effects
+- Smooth orbital controls (drag to rotate, scroll to zoom)
+- Auto-rotation with manual override
+
+### 💥 Scientific Impact Simulation
+- **Click anywhere on Earth** to select impact location
+- Precise crater diameter calculations
+- Impact energy analysis (megaton TNT equivalent)
+- Blast radius visualization
+- Affected area calculations (km²)
+- Impact velocity and trajectory modeling
+
+### 🤖 AI-Powered Analysis
+- **Google Gemini 1.5 Flash** integration
+- Detailed impact scenario analysis
+- Environmental effect predictions
+- Population and infrastructure risk assessment
+- Real-time AI-generated insights
+
+### �️ Impact Visualization
+- Interactive impact zone maps (Leaflet/OpenStreetMap)
+- Crater zone highlighting with radius indicators
+- Blast damage zones with color-coded severity
+- Coordinate display and location details
+- Zoom and pan for detailed inspection
+
+### 🎨 Modern AEGIS Theme
+- Cyberpunk-inspired cyan and gold color scheme
+- Glassmorphism UI effects with backdrop blur
+- Smooth animations and transitions
+- Responsive design for all screen sizes
+- Professional SVG icons throughout
+
+### 📊 Enhanced Asteroid Sidebar
+- **Smart search** with real-time filtering
+- Threat level filtering (All/High/Medium/Low)
+- Modern card-based layout
+- Shimmer loading effects
+- Smooth scrolling with custom scrollbar
+- NASA JPL direct links per asteroid
+
+### 🎮 User Experience
+- Intuitive click-to-select interface
+- Loading states with progress indicators
+- Error handling with graceful fallbacks
+- Deselect functionality for easy reset
+- Educational disclaimers
+- Responsive controls panel
+
+## 🎬 Screenshots
+
+### Main Dashboard
+![AEGIS Dashboard](docs/screenshots/dashboard.png)
+*Interactive 3D Earth with asteroid selection sidebar*
+
+### Impact Simulation
+![Impact Results](docs/screenshots/impact-simulation.png)
+*Detailed impact statistics and AI analysis*
+
+### Impact Zone Visualization
+![Impact Map](docs/screenshots/impact-map.png)
+*Interactive map showing crater and blast zones*
+
+## 🎯 How It Works
+
+1. **Select an Asteroid**
+   - Browse 20+ NASA-verified near-Earth asteroids
+   - Filter by threat level or search by name
+   - View detailed orbital and physical parameters
+
+2. **Choose Impact Location**
+   - Click anywhere on the interactive 3D Earth
+   - Precise latitude/longitude selection
+   - Visual location indicator appears
+
+3. **Simulate Impact**
+   - Click "Simulate Impact" button
+   - Scientific calculations using real physics
+   - Crater size, blast radius, and energy computed
+
+4. **Analyze Results**
+   - View detailed impact statistics
+   - Explore interactive impact zone map
+   - Read AI-generated analysis and predictions
+   - Understand potential effects and risks
+
+5. **Explore Scenarios**
+   - Try different asteroids and locations
+   - Compare impact effects
+   - Learn about planetary defense
 
 ## 🚀 Quick Start
 
-### Development Mode
+### Try the Live Demo
+Visit **[aegis-neo.vercel.app](https://aegis-neo.vercel.app/)** to use AEGIS instantly - no installation required!
+
+### Local Development
 ```bash
 # Start backend
 cd backend
@@ -214,54 +334,82 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel + backend deployment instructions.
 
 **Before deploying, complete the [Deployment Checklist](DEPLOYMENT-CHECKLIST.md)**
 
-## Technology Stack
+## 🛠️ Technology Stack
 
 ### Backend
 - **Python 3.11+** - Programming language
-- **FastAPI** - Modern web framework
+- **FastAPI** - Modern, high-performance web framework
 - **Poliastro** - Orbital mechanics calculations
-- **Astropy** - Astronomical calculations
-- **NumPy/SciPy** - Scientific computing
+- **Astropy** - Astronomical calculations and constants
+- **NumPy/SciPy** - Scientific computing and numerical analysis
 - **Requests** - NASA API integration
-- **Uvicorn** - ASGI server
-- **Pydantic** - Data validation
+- **Uvicorn** - Lightning-fast ASGI server
+- **Pydantic** - Data validation and settings management
+- **Google Gemini API** - AI-powered impact analysis
 
 ### Frontend
-- **React 19** - UI framework
-- **Vite** - Build tool and dev server
+- **React 19** - Modern UI framework with concurrent features
+- **Vite** - Next-generation frontend tooling
 - **Three.js** - 3D graphics library
 - **@react-three/fiber** - React renderer for Three.js
 - **@react-three/drei** - Useful helpers for React Three Fiber
-- **Leaflet** - Interactive maps
+- **Leaflet** - Interactive mapping library
 - **react-leaflet** - React components for Leaflet
-- **Axios** - HTTP client
+- **Axios** - Promise-based HTTP client
+- **GSAP** - Professional-grade animation library
+- **Custom AEGIS Theme** - Cyberpunk-inspired UI design
+
+### APIs & Data Sources
+- **NASA JPL Small-Body Database** - Asteroid orbital data
+- **NASA NEO Web Service** - Near-Earth Object information
+- **Google Gemini 1.5 Flash** - AI analysis generation
+- **OpenStreetMap** - Impact zone mapping
 
 ### DevOps & Deployment
-- **Docker** - Containerization
+- **Docker** - Containerization platform
 - **Docker Compose** - Multi-container orchestration
-- **Nginx** - Web server and reverse proxy
-- **GitHub Actions** - CI/CD (optional)
+- **Nginx** - High-performance web server and reverse proxy
+- **Vercel** - Frontend hosting and CDN
+- **Railway** - Backend API hosting (recommended)
+- **GitHub Actions** - CI/CD automation (optional)
 
 ## 🔧 Environment Variables
 
 ### Backend (.env)
 ```env
+# NASA API Configuration
 NASA_API_KEY=your_nasa_api_key_here
+
+# Google Gemini AI Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Server Configuration
 ENVIRONMENT=development
 HOST=0.0.0.0
 PORT=8000
 DEBUG=True
-ALLOWED_ORIGINS=http://localhost:5173
+
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:5173,https://aegis-neo.vercel.app
+
+# Logging
 LOG_LEVEL=INFO
 ```
 
 ### Frontend (.env)
 ```env
+# API Configuration
 VITE_API_BASE_URL=http://localhost:8000
+
+# App Configuration
 VITE_APP_ENV=development
-VITE_APP_NAME="Project Aegis"
+VITE_APP_NAME="AEGIS - Asteroid Impact Simulator"
 VITE_ENABLE_DEBUG_LOGGING=true
 ```
+
+### Getting API Keys
+- **NASA API Key**: Free at [https://api.nasa.gov/](https://api.nasa.gov/) (instant approval)
+- **Gemini API Key**: Free at [https://ai.google.dev/](https://ai.google.dev/) (requires Google account)
 
 See `.env.example` files for full documentation.
 
@@ -358,26 +506,72 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **NASA**: For providing the Near-Earth Object API
-- **Poliastro**: For orbital mechanics calculations
-- **Three.js**: For 3D visualization capabilities
-- **React & Vite**: For modern web development tools
+- **NASA JPL** - For providing the Near-Earth Object API and Small-Body Database
+- **Google Gemini AI** - For powering intelligent impact analysis
+- **Poliastro** - For accurate orbital mechanics calculations
+- **Three.js Community** - For 3D visualization capabilities
+- **React & Vite Teams** - For modern web development tools
+- **OpenStreetMap** - For detailed mapping data
+- **Vercel** - For seamless frontend hosting and deployment
 
-## 📞 Support
+## 📞 Support & Contact
 
-- **Documentation**: See DEPLOYMENT.md and USER_GUIDE.md
-- **Issues**: Submit via GitHub Issues
-- **NASA API**: [https://api.nasa.gov/](https://api.nasa.gov/)
+- **Live Demo**: [aegis-neo.vercel.app](https://aegis-neo.vercel.app/)
+- **Documentation**: See [DEPLOYMENT.md](DEPLOYMENT.md) and [USER_GUIDE.md](USER_GUIDE.md)
+- **Issues**: Submit via [GitHub Issues](https://github.com/NexionisJake/Aegis/issues)
+- **NASA API**: [api.nasa.gov](https://api.nasa.gov/)
+- **Gemini AI**: [ai.google.dev](https://ai.google.dev/)
 
-## 🗺️ Roadmap
+## ⚠️ Disclaimer
 
-- [ ] Add more deflection methods
-- [ ] Implement real-time tracking
-- [ ] Add user authentication
+AEGIS is an **educational simulation tool** designed for learning and awareness about asteroid impacts and planetary defense. All impact calculations are approximations based on simplified physics models. Actual asteroid impact effects would vary significantly based on numerous factors not fully modeled here including:
+- Atmospheric entry dynamics
+- Asteroid composition and structure
+- Local geology and terrain
+- Weather conditions
+- Ocean depth (for water impacts)
+
+**This tool should not be used for actual emergency planning or scientific research without proper validation.**
+
+---
+
+<div align="center">
+
+**�️ Built with ❤️ for planetary defense awareness 🌍**
+
+**[Launch AEGIS](https://aegis-neo.vercel.app/)** | **[Documentation](DEPLOYMENT.md)** | **[Report Issue](https://github.com/NexionisJake/Aegis/issues)**
+
+*Protecting Earth, one simulation at a time* 🚀
+
+</div>
+
+### ✅ Completed Features
+- [x] Interactive 3D Earth visualization
+- [x] Real-time NASA asteroid data integration
+- [x] Scientific impact calculations
+- [x] AI-powered impact analysis (Gemini)
+- [x] Impact zone mapping with Leaflet
+- [x] Modern AEGIS theme with glassmorphism
+- [x] Responsive design for all devices
+- [x] Enhanced asteroid sidebar with search & filters
+- [x] Production deployment (Vercel + Railway)
+
+### 🚧 In Progress
+- [ ] Advanced deflection method simulations
+- [ ] Historical impact event database
+- [ ] Comparison mode for multiple asteroids
+
+### 🔮 Future Plans
+- [ ] Real-time asteroid tracking notifications
+- [ ] User authentication and saved simulations
 - [ ] Database integration for favorites
-- [ ] Mobile app version
-- [ ] Advanced impact simulations
-- [ ] Multi-language support
+- [ ] Mobile app (React Native)
+- [ ] Advanced atmospheric entry modeling
+- [ ] Multi-asteroid collision scenarios
+- [ ] Educational mode with guided tours
+- [ ] Multi-language support (i18n)
+- [ ] API rate limiting dashboard
+- [ ] Custom asteroid parameters input
 
 ---
 

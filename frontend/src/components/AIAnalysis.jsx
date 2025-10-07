@@ -126,7 +126,26 @@ const AIAnalysis = ({ asteroidData, impactResults, location }) => {
     )
   }
 
-  if (!analysis) return null
+  if (!analysis) {
+    // Show a waiting state instead of returning null
+    return (
+      <div className="ai-analysis">
+        <div className="ai-header">
+          <span className="ai-icon">🤖</span>
+          <h3>AI Impact Analysis</h3>
+          <span className="powered-by">
+            <span className="gemini-logo">💎</span>
+            Powered by Gemini 1.5 Flash
+          </span>
+        </div>
+        <div className="analysis-content">
+          <p style={{ opacity: 0.7, fontStyle: 'italic', padding: '20px', textAlign: 'center' }}>
+            Waiting for AI analysis to generate...
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const analysisSegments = formatAnalysis(analysis)
 

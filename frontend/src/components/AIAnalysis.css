@@ -1,14 +1,28 @@
 /* AI Analysis Component Styling */
 .ai-analysis {
-  background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
-  border-radius: 20px;
-  padding: 25px;
+  background: linear-gradient(135deg, rgba(10, 15, 35, 0.95) 0%, rgba(0, 20, 40, 0.95) 100%);
+  border-radius: 16px;
+  padding: 24px;
   margin-top: 20px;
-  color: white;
-  box-shadow: 0 10px 30px rgba(45, 27, 105, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #F5F7FA;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+              0 0 20px rgba(0, 229, 255, 0.2),
+              inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(0, 229, 255, 0.4);
+  backdrop-filter: blur(15px);
+  font-family: 'Inter', sans-serif;
+  animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* AI Header */
@@ -16,34 +30,55 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(0, 229, 255, 0.2);
 }
 
 .ai-header h3 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
   display: flex;
   align-items: center;
   gap: 10px;
+  background: linear-gradient(135deg, #00E5FF, #FFCC33);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .ai-icon {
-  font-size: 28px;
-  animation: pulse 2s infinite;
+  font-size: 24px;
+  filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6));
+  animation: aiPulse 3s ease-in-out infinite;
+}
+
+@keyframes aiPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.6));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.9));
+  }
 }
 
 .powered-by {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 11px;
+  color: rgba(245, 247, 250, 0.7);
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 10px;
-  border-radius: 15px;
+  gap: 6px;
+  background: rgba(0, 229, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  font-family: 'Space Mono', monospace;
 }
 
 .gemini-logo {
